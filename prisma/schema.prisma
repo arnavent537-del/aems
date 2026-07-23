@@ -1,0 +1,201 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  
+}
+
+model User {
+  id                 String       @id @default(uuid())
+  username           String       @unique
+  passwordHash       String
+  role               String       // 'admin', 'accountant', 'supervisor'
+  assignedClientId   String?      // legacy single assignment (kept for backwards compatibility)
+  assignedClient     Client?      @relation(fields: [assignedClientId], references: [id])
+  employeeId         String?      @unique // link to Employee record for privacy-restricted roles
+  employee           Employee?    @relation(fields: [employeeId], references: [id])
+  clientLinks        UserClient[]
+  createdAt          DateTime     @default(now())
+  lastActive         DateTime?    // timestamp of last activity
+  attendanceRecords  Attendance[]
+  salaryRecords      Salary[]
+  approvedAdvances   Advance[]   @relation("ApprovedAdvances")
+  processedAdvances  Advance[]   @relation("ProcessedAdvances")
+  activityLogs       ActivityLog[]
+}
+
+model UserClient {
+  id       String @id @default(uuid())
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId String
+  client   Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, clientId])
+}
+
+model Client {
+  id             String       @id @default(uuid())
+  name           String       @unique
+  pfApplicable   Boolean      @default(true)
+  esicApplicable Boolean      @default(true)
+  ptApplicable   Boolean      @default(true)
+  isInfinity     Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  employees      Employee[]
+  attendance     Attendance[]
+  advances       Advance[]
+  salaries       Salary[]
+  compliance     Compliance[]
+  users          User[]
+  userLinks      UserClient[]
+}
+
+model Employee {
+  id                 String       @id @default(uuid())
+  employeeCode       String       @unique
+  clientId           String
+  client             Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name               String
+  dob                String       // DD-MM-YYYY
+  address            String
+  documentStatus     String       // 'Pending', 'Submitted', 'Verified'
+  safetyApronIssued  Boolean      @default(false)
+  punchingNo         String?      // for Infinity-only
+  passwordHash       String?      // set during employee self sign-up; null = not yet registered
+  dateOfJoining      String       // DD-MM-YYYY
+  dateOfExit         String?      // DD-MM-YYYY, nullable (left date)
+  exitReason         String?      // reason for exit
+  status             String       @default("Active") // 'Active' | 'Left'
+  gender             String?      // 'Male' or 'Female'
+  branch             String?      // branch/location
+  bankName           String?
+  bankAccountNo      String?
+  ifscCode           String?
+  pfNo               String?
+  esicNo             String?
+  uanNo              String?
+  phoneNo            String?
+  aadharNo           String?
+  panNo              String?
+  salaryRate         Float        // Daily rate or monthly base salary
+  otRateMultiplier   Float        @default(2.0)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  attendance         Attendance[]
+  advances       Advance[]
+  salaries       Salary[]
+  assignedLocation   String?      // assigned work location (lat,lng) for Arnav employees
+  user               User?        // staff user linked to this employee record
+}
+
+model Attendance {
+  id         String   @id @default(uuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  date       String   // YYYY-MM-DD
+  status     String   // 'P', 'A', 'P-2', 'W-O', 'PH'
+  otHours    Float    @default(0.0)
+  workHours  Float?
+  inTime     String?  // HH:MM timestamp when employee checked in
+  outTime    String?  // HH:MM timestamp when employee checked out
+  inLocation String?  // lat,lng when checked in
+  outLocation String? // lat,lng when checked out
+  createdBy  String
+  createdByUser User   @relation(fields: [createdBy], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, date])
+}
+
+model Advance {
+  id           String    @id @default(uuid())
+  employeeId   String
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  clientId     String
+  client       Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  date         String    // YYYY-MM-DD
+  amount       Float     // positive = given, negative = recovery
+  type         String    // 'given' or 'recovery'
+  remarks      String?
+  status       String    @default("pending") // pending → approved → paid | hold | rejected
+  approvedBy   String?
+  approver     User?     @relation("ApprovedAdvances", fields: [approvedBy], references: [id])
+  approvedAt   DateTime?
+  processedBy  String?
+  processor    User?     @relation("ProcessedAdvances", fields: [processedBy], references: [id])
+  processedAt  DateTime?
+  createdBy    String
+  createdAt    DateTime  @default(now())
+}
+
+model Salary {
+  id                String   @id @default(uuid())
+  employeeId        String
+  employee          Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  clientId          String
+  client            Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  month             String   // YYYY-MM
+  paidDays          Float
+  otHours           Float
+  basicSalary       Float
+  otSalary          Float
+  grossSalary       Float
+  pfDeduction       Float    @default(0.0)
+  esicDeduction     Float    @default(0.0)
+  ptDeduction       Float    @default(0.0)
+  advanceDeduction   Float    @default(0.0)
+  otherDeductions   Float    @default(0.0)
+  netPaid           Float
+  createdBy         String
+  createdByUser     User     @relation(fields: [createdBy], references: [id])
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([employeeId, month])
+}
+
+model Compliance {
+  id                     String   @id @default(uuid())
+  month                  String   // YYYY-MM
+  clientId               String
+  client                 Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  pfFilingStatus         String   // 'Pending', 'Filed', 'Paid'
+  esicFilingStatus       String   // 'Pending', 'Filed', 'Paid'
+  pfChallanUrl           String?
+  esicChallanUrl         String?
+  napsComplianceStatus   String   @default("Pending") // 'Pending', 'Done'
+  showCauseNoticesCount  Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([clientId, month])
+}
+
+model AuditTrail {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  details   String
+  createdAt DateTime @default(now())
+}
+
+model ActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    String   // e.g., 'LOGIN', 'LOGOUT', 'CREATE_EMPLOYEE', 'UPDATE_ATTENDANCE', etc.
+  details   String   // description of the action
+  ipAddress String?  // optional IP address
+  userAgent String?  // optional browser/device info
+  createdAt DateTime @default(now())
+}

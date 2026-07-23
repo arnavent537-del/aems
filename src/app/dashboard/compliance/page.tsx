@@ -1,0 +1,258 @@
+"use client";
+
+import { useEffect, useState, useCallback } from "react";
+import { api } from "@/lib/api";
+import { Card, Badge, Button, Modal, Field, inputClass, Toast } from "@/components/ui";
+import type { Client, ComplianceRecord } from "@/lib/types";
+import { Plus, Pencil, Trash2 } from "lucide-react";
+
+const STATUSES = ["Pending", "Filed", "Paid"];
+
+function currentMonth(): string {
+  return new Date().toISOString().slice(0, 7);
+}
+
+export default function CompliancePage() {
+  const [clients, setClients] = useState<Client[]>([]);
+  const [clientId, setClientId] = useState<string>("");
+  const [month, setMonth] = useState(currentMonth());
+  const [records, setRecords] = useState<ComplianceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<string>("admin");
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<ComplianceRecord | null>(null);
+  const [form, setForm] = useState<any>({});
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ msg: string; type: "error" | "success" }>({ msg: "", type: "error" });
+
+  const canEdit = role === "admin" || role === "accountant";
+
+  useEffect(() => {
+    api.getMe().then((u) => setRole(u.role)).catch(() => {});
+    api.listClients().then((cl) => {
+      setClients(cl);
+      if (cl.length) setClientId(cl[0].id);
+    });
+  }, []);
+
+  const load = useCallback(async () => {
+    if (!clientId) return;
+    setLoading(true);
+    try {
+      const data = await api.listCompliance({ clientId, month });
+      setRecords(data);
+    } finally {
+      setLoading(false);
+    }
+  }, [clientId, month]);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  function openCreate() {
+    setEditing(null);
+    setForm({ clientId, month, pfFilingStatus: "Pending", esicFilingStatus: "Pending", napsComplianceStatus: "Pending" });
+    setModalOpen(true);
+  }
+
+  function openEdit(c: ComplianceRecord) {
+    setEditing(c);
+    setForm({ ...c });
+    setModalOpen(true);
+  }
+
+  async function save() {
+    setSaving(true);
+    try {
+      if (editing) {
+        await api.updateCompliance(editing.id, form);
+        setToast({ msg: "Compliance updated", type: "success" });
+      } else {
+        await api.createCompliance({ clientId: form.clientId, month: form.month });
+        setToast({ msg: "Compliance record created", type: "success" });
+      }
+      setModalOpen(false);
+      await load();
+    } catch (e: any) {
+      setToast({ msg: e.message || "Save failed", type: "error" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove(c: ComplianceRecord) {
+    if (!confirm("Delete this compliance record?")) return;
+    try {
+      await api.deleteCompliance(c.id);
+      setToast({ msg: "Record deleted", type: "success" });
+      await load();
+    } catch (e: any) {
+      setToast({ msg: e.message || "Delete failed", type: "error" });
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Compliance</h1>
+          <p className="text-sm text-slate-500">Track PF / ESIC filing and NAPS compliance per client.</p>
+        </div>
+        {canEdit && (
+          <Button onClick={openCreate}>
+            <Plus className="h-4 w-4" /> Add Record
+          </Button>
+        )}
+      </div>
+
+      <Card className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-500">Client</label>
+          <select className={inputClass} value={clientId} onChange={(e) => setClientId(e.target.value)}>
+            {clients.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-500">Month</label>
+          <input type="month" className={inputClass} value={month} onChange={(e) => setMonth(e.target.value)} />
+        </div>
+      </Card>
+
+      <Card className="overflow-x-auto p-0">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+              <th className="px-4 py-3">Client</th>
+              <th className="px-4 py-3">Month</th>
+              <th className="px-4 py-3">PF</th>
+              <th className="px-4 py-3">ESIC</th>
+              <th className="px-4 py-3">NAPS</th>
+              {canEdit && <th className="px-4 py-3 text-right">Actions</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {loading && (
+              <tr>
+                <td colSpan={canEdit ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
+                  Loading...
+                </td>
+              </tr>
+            )}
+            {!loading && records.length === 0 && (
+              <tr>
+                <td colSpan={canEdit ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
+                  No compliance records for this month.
+                </td>
+              </tr>
+            )}
+            {!loading &&
+              records.map((c) => (
+                <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
+                  <td className="px-4 py-3 font-medium text-slate-800">{c.client?.name}</td>
+                  <td className="px-4 py-3 text-slate-600">{c.month}</td>
+                  <td className="px-4 py-3">
+                    <Badge color={c.pfFilingStatus === "Paid" ? "green" : c.pfFilingStatus === "Filed" ? "blue" : "amber"}>
+                      {c.pfFilingStatus}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge color={c.esicFilingStatus === "Paid" ? "green" : c.esicFilingStatus === "Filed" ? "blue" : "amber"}>
+                      {c.esicFilingStatus}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3">
+                    <Badge color={c.napsComplianceStatus === "Done" ? "green" : "amber"}>{c.napsComplianceStatus}</Badge>
+                  </td>
+                  {canEdit && (
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => openEdit(c)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100" title="Edit">
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => remove(c)} className="rounded p-1.5 text-red-600 hover:bg-red-50" title="Delete">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  )}
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </Card>
+
+      <Modal
+        open={modalOpen}
+        title={editing ? "Edit Compliance" : "Add Compliance Record"}
+        onClose={() => setModalOpen(false)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Saving..." : "Save"}
+            </Button>
+          </>
+        }
+      >
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {!editing && (
+            <>
+              <Field label="Client">
+                <select className={inputClass} value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })}>
+                  {clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Month">
+                <input type="month" className={inputClass} value={form.month} onChange={(e) => setForm({ ...form, month: e.target.value })} />
+              </Field>
+            </>
+          )}
+          <Field label="PF Filing Status">
+            <select className={inputClass} value={form.pfFilingStatus} onChange={(e) => setForm({ ...form, pfFilingStatus: e.target.value })}>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="ESIC Filing Status">
+            <select className={inputClass} value={form.esicFilingStatus} onChange={(e) => setForm({ ...form, esicFilingStatus: e.target.value })}>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="PF Challan URL">
+            <input className={inputClass} value={form.pfChallanUrl || ""} onChange={(e) => setForm({ ...form, pfChallanUrl: e.target.value })} />
+          </Field>
+          <Field label="ESIC Challan URL">
+            <input className={inputClass} value={form.esicChallanUrl || ""} onChange={(e) => setForm({ ...form, esicChallanUrl: e.target.value })} />
+          </Field>
+          <Field label="NAPS Compliance">
+            <select className={inputClass} value={form.napsComplianceStatus} onChange={(e) => setForm({ ...form, napsComplianceStatus: e.target.value })}>
+              <option value="Pending">Pending</option>
+              <option value="Done">Done</option>
+            </select>
+          </Field>
+        </div>
+      </Modal>
+
+      <Toast message={toast.msg} type={toast.type} />
+    </div>
+  );
+}
