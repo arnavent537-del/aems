@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Card, Badge } from "@/components/ui";
 import type { Client, Employee, SalaryRecord, ComplianceRecord, SessionUser, ClientAdvanceSummary } from "@/lib/types";
-import { Building2, Users, Receipt, ShieldAlert, Wallet, UserMinus, UserPlus, HandCoins } from "lucide-react";
+import { Building2, Users, Receipt, ShieldAlert, Wallet, UserMinus, UserPlus, HandCoins, Smartphone, MapPin, LogIn, LogOut, Clock, CalendarDays } from "lucide-react";
 
 function currentMonth(): string {
   const d = new Date();
@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const [compliance, setCompliance] = useState<ComplianceRecord[]>([]);
   const [advanceSummary, setAdvanceSummary] = useState<ClientAdvanceSummary[]>([]);
   const [employeeStats, setEmployeeStats] = useState<{ present: number; outstanding: number; lastSalary: SalaryRecord | null } | null>(null);
+  const [todayAttendance, setTodayAttendance] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   const month = currentMonth();
@@ -53,6 +54,10 @@ export default function DashboardPage() {
             api.listAdvances({ employeeId: myId || "" }).catch(() => []),
             api.listSalaries(clientId, undefined, myId || "").catch(() => []),
           ]);
+          const today = new Date().toISOString().slice(0, 10);
+          const todayRec = att.find((r: any) => r.date === today);
+          setTodayAttendance(todayRec || null);
+
           const present = att.filter((r: any) => PRESENT.has(r.status)).length;
           const outstanding = adv.reduce(
             (sum: number, a: any) => sum + (a.type === "recovery" ? -Math.abs(a.amount) : Math.abs(a.amount)),
@@ -145,6 +150,63 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-bold text-slate-800">Welcome, {user.name || user.username}</h1>
           <p className="text-sm text-slate-500">Your personal attendance, advance and salary overview.</p>
         </div>
+
+        {/* Check In / Out Card */}
+        <a
+          href="/employee-portal"
+          className="block rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-blue-50 p-5 transition hover:shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-100">
+                <Smartphone className="h-6 w-6 text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-slate-800">Attendance Check In / Out</h2>
+                <p className="text-sm text-slate-500">Mark your daily attendance via mobile</p>
+              </div>
+            </div>
+            <div className="hidden rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white sm:block">
+              Open
+            </div>
+          </div>
+          {todayAttendance && (
+            <div className="mt-4 flex flex-wrap gap-4 border-t border-indigo-200 pt-4">
+              <div className="flex items-center gap-2">
+                <LogIn className={`h-4 w-4 ${todayAttendance.inTime ? "text-emerald-600" : "text-slate-400"}`} />
+                <span className="text-sm">
+                  <span className="text-slate-500">In:</span>{" "}
+                  <span className={todayAttendance.inTime ? "font-semibold text-emerald-700" : "text-slate-400"}>
+                    {todayAttendance.inTime || "Not checked in"}
+                  </span>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <LogOut className={`h-4 w-4 ${todayAttendance.outTime ? "text-emerald-600" : "text-slate-400"}`} />
+                <span className="text-sm">
+                  <span className="text-slate-500">Out:</span>{" "}
+                  <span className={todayAttendance.outTime ? "font-semibold text-emerald-700" : "text-slate-400"}>
+                    {todayAttendance.outTime || "Not checked out"}
+                  </span>
+                </span>
+              </div>
+              {todayAttendance.workHours && (
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm">
+                    <span className="text-slate-500">Hours:</span>{" "}
+                    <span className="font-semibold text-blue-700">{todayAttendance.workHours.toFixed(2)} hrs</span>
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+          <div className="mt-3 sm:hidden">
+            <span className="flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-3 text-center text-sm font-medium text-white">
+              <Smartphone className="h-5 w-5" /> Open Check In / Out
+            </span>
+          </div>
+        </a>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <Card className="flex flex-col">

@@ -12,6 +12,7 @@ import {
   UserCog,
   LogOut,
   Building2,
+  Smartphone,
 } from "lucide-react";
 import type { SessionUser } from "@/lib/types";
 
@@ -31,6 +32,7 @@ const MENU: MenuItem[] = [
   { href: "/dashboard/clients", label: "Clients", icon: Building2, roles: ["admin"] },
   { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ["admin", "accountant"] },
   { href: "/dashboard/users", label: "Users", icon: UserCog, roles: ["admin"] },
+  { href: "/employee-portal", label: "Check In / Out", icon: Smartphone, roles: ["employee"] },
 ];
 
 export default function Sidebar({ user, onClose }: { user: SessionUser; onClose?: () => void }) {
