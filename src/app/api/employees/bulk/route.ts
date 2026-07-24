@@ -36,6 +36,15 @@ export async function POST(request: Request) {
           return `${dd}-${mm}-${yyyy}`;
         }
       }
+      // Convert YYYY-MM-DD → DD-MM-YYYY
+      let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+      // Convert DD/MM/YYYY → DD-MM-YYYY
+      m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+      if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+      // Convert YYYY/MM/DD → DD-MM-YYYY
+      m = s.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+      if (m) return `${m[3]}-${m[2]}-${m[1]}`;
       return s;
     }
 

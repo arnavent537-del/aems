@@ -168,10 +168,21 @@ export default function EmployeesPage() {
     }
   }
 
-  function toDateInput(ddMmYyyy: string): string {
-    if (!ddMmYyyy) return "";
-    const m = ddMmYyyy.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    return m ? `${m[3]}-${m[2]}-${m[1]}` : "";
+  function toDateInput(dateStr: string): string {
+    if (!dateStr) return "";
+    // Try DD-MM-YYYY → convert to YYYY-MM-DD
+    let m = dateStr.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    // Try YYYY-MM-DD → already correct for <input type="date">
+    m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return dateStr;
+    // Try DD/MM/YYYY → convert to YYYY-MM-DD
+    m = dateStr.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+    // Try YYYY/MM/DD → convert to YYYY-MM-DD
+    m = dateStr.match(/^(\d{4})\/(\d{2})\/(\d{2})$/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    return "";
   }
 
   function fromDateInput(yyyyMmDd: string): string {
