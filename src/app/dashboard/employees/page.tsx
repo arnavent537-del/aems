@@ -12,7 +12,6 @@ export default function EmployeesPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [clientFilter, setClientFilter] = useState<string>("");
-  const [includeExited, setIncludeExited] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
   const [docStatusFilter, setDocStatusFilter] = useState<string>("all");
@@ -46,9 +45,9 @@ export default function EmployeesPage() {
   }, []);
 
   const loadEmployees = useCallback(async () => {
-    const emp = await api.listEmployees({ clientId: clientFilter || undefined, includeExited });
+    const emp = await api.listEmployees({ clientId: clientFilter || undefined, includeExited: true });
     setEmployees(emp);
-  }, [clientFilter, includeExited]);
+  }, [clientFilter]);
 
   useEffect(() => {
     api
@@ -64,7 +63,7 @@ export default function EmployeesPage() {
     if (!clientFilter) return;
     setLoading(true);
     loadEmployees().finally(() => setLoading(false));
-  }, [clientFilter, includeExited, loadEmployees]);
+  }, [clientFilter, loadEmployees]);
 
   function openAdd() {
     setEditing(null);
@@ -72,6 +71,7 @@ export default function EmployeesPage() {
       clientId: clientFilter,
       documentStatus: "Pending",
       safetyApronIssued: false,
+      uniform: "No",
       otRateMultiplier: 2,
       salaryRate: 0,
     });
@@ -308,14 +308,6 @@ export default function EmployeesPage() {
             />
           </div>
         </div>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-600 whitespace-nowrap">
-          <input
-            type="checkbox"
-            checked={includeExited}
-            onChange={(e) => setIncludeExited(e.target.checked)}
-          />
-          Include exited
-        </label>
       </Card>
 
       <Card className="overflow-x-auto p-0">
@@ -327,7 +319,7 @@ export default function EmployeesPage() {
               <th className="px-4 py-3">Client</th>
               <th className="px-4 py-3">DOJ</th>
               <th className="px-4 py-3">Documents</th>
-              <th className="px-4 py-3">Apron</th>
+              <th className="px-4 py-3">Uniform</th>
               <th className="px-4 py-3">Salary Rate</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Account</th>
@@ -367,7 +359,7 @@ export default function EmployeesPage() {
                   </td>
                   <td className="px-4 py-3">
                     {e.safetyApronIssued ? (
-                      <Badge color="green">Issued</Badge>
+                      <Badge color="blue">Yes</Badge>
                     ) : (
                       <Badge color="slate">No</Badge>
                     )}
@@ -548,14 +540,18 @@ export default function EmployeesPage() {
               </p>
             </div>
           )}
-          <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-600">
-            <input
-              type="checkbox"
-              checked={!!form.safetyApronIssued}
-              onChange={(e) => setForm({ ...form, safetyApronIssued: e.target.checked })}
-            />
-            Safety Apron Issued
-          </label>
+          <Field label="Uniform">
+            <select
+              className={inputClass}
+              value={form.safetyApronIssued ? (form.uniform || "Yes") : "No"}
+              onChange={(e) => setForm({ ...form, safetyApronIssued: e.target.value !== "No", uniform: e.target.value === "No" ? "No" : e.target.value })}
+            >
+              <option value="No">No</option>
+              <option value="Full Uniform">Full Uniform</option>
+              <option value="Apron">Apron</option>
+              <option value="Shoes">Shoes</option>
+            </select>
+          </Field>
         </div>
       </Modal>
 
