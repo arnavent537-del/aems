@@ -155,7 +155,7 @@ export default function AttendancePage() {
       return;
     }
     const c = cells[key(empId, ds)] || { status: "", otHours: 0, workHours: undefined };
-    setPopup({ empId, empName, ds, status: c.status, ot: c.otHours, workHours: c.workHours });
+    setPopup({ empId, empName, ds, status: c.status, ot: c.otHours, workHours: c.workHours ?? undefined });
   }
 
   function chooseStatus(status: string) {
