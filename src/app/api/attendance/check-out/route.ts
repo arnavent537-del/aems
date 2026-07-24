@@ -52,9 +52,9 @@ export async function POST(request: Request) {
       }
     }
 
-    // Get current time if not provided
+    // Get current time in IST (Asia/Kolkata) if not provided
     const now = new Date();
-    const currentTime = outTime || now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    const currentTime = outTime || now.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false });
     const currentLocation = outLocation || null;
 
     // Find attendance record for today

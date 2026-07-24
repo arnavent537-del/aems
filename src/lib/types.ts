@@ -58,6 +58,10 @@ export interface AttendanceRecord {
   status: string;
   otHours: number;
   workHours?: number | null;
+  inTime?: string | null;
+  outTime?: string | null;
+  inLocation?: string | null;
+  outLocation?: string | null;
   employee?: { employeeCode: string; name: string; dateOfExit: string | null };
 }
 

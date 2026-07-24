@@ -26,7 +26,7 @@ function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
-type Cell = { status: string; otHours: number; workHours?: number };
+type Cell = { status: string; otHours: number; workHours?: number; inTime?: string | null; outTime?: string | null };
 
 export default function AttendancePage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -109,7 +109,7 @@ export default function AttendancePage() {
     api.listAttendance(param).then((recs) => {
       const map: Record<string, Cell> = {};
       for (const r of recs) {
-        map[`${r.employeeId}__${r.date}`] = { status: r.status, otHours: r.otHours };
+        map[`${r.employeeId}__${r.date}`] = { status: r.status, otHours: r.otHours, workHours: r.workHours, inTime: r.inTime, outTime: r.outTime };
       }
       setCells(map);
     });
@@ -144,7 +144,7 @@ export default function AttendancePage() {
   function setCell(empId: string, d: string, patch: Partial<Cell>) {
     setCells((prev) => ({
       ...prev,
-      [key(empId, d)]: { status: prev[key(empId, d)]?.status || "", otHours: prev[key(empId, d)]?.otHours || 0, workHours: prev[key(empId, d)]?.workHours, ...patch },
+      [key(empId, d)]: { status: prev[key(empId, d)]?.status || "", otHours: prev[key(empId, d)]?.otHours || 0, workHours: prev[key(empId, d)]?.workHours, inTime: prev[key(empId, d)]?.inTime, outTime: prev[key(empId, d)]?.outTime, ...patch },
     }));
   }
 
@@ -475,6 +475,8 @@ export default function AttendancePage() {
                     {d}
                   </th>
                 ))}
+                <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">In</th>
+                <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">Out</th>
                 <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">Days Present</th>
                 <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">Total OT</th>
                 {showSalary && <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">Monthly Salary</th>}
@@ -508,6 +510,27 @@ export default function AttendancePage() {
                         </td>
                       );
                     })}
+                    <td className="px-2 py-1 text-center text-[11px] text-slate-600 whitespace-nowrap">
+                      {(() => {
+                        // Show the most recent inTime from any day this month
+                        for (let d = dayCount; d >= 1; d--) {
+                          const ds = `${month}-${String(d).padStart(2, "0")}`;
+                          const c = cells[key(e.id, ds)];
+                          if (c?.inTime) return c.inTime;
+                        }
+                        return "—";
+                      })()}
+                    </td>
+                    <td className="px-2 py-1 text-center text-[11px] text-slate-600 whitespace-nowrap">
+                      {(() => {
+                        for (let d = dayCount; d >= 1; d--) {
+                          const ds = `${month}-${String(d).padStart(2, "0")}`;
+                          const c = cells[key(e.id, ds)];
+                          if (c?.outTime) return c.outTime;
+                        }
+                        return "—";
+                      })()}
+                    </td>
                     <td className="px-2 py-1 text-center text-sm font-semibold text-emerald-700">{daysPresent(e.id)}</td>
                     <td className="px-2 py-1 text-center text-sm font-semibold text-indigo-700">{totalOt(e.id)}</td>
                     {showSalary && <td className="px-2 py-1 text-center text-sm text-slate-600">₹{presentSalary(e.id)}</td>}
@@ -531,6 +554,7 @@ export default function AttendancePage() {
                         </td>
                       );
                     })}
+                    <td className="px-2 py-1 text-center text-[10px] text-slate-300">—</td>
                     <td className="px-2 py-1 text-center text-[10px] text-slate-300">—</td>
                     <td className="px-2 py-1 text-center text-[10px] text-slate-300">—</td>
                     {showSalary && <td className="px-2 py-1 text-center text-[10px] text-slate-300">—</td>}

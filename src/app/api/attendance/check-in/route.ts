@@ -58,9 +58,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No admin user found in the system" }, { status: 500 });
     }
 
-    // Get current time if not provided
+    // Get current time in IST (Asia/Kolkata) if not provided
     const now = new Date();
-    const currentTime = inTime || now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
+    const currentTime = inTime || now.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false });
     const currentLocation = inLocation || null;
 
     // Check if attendance record exists for today

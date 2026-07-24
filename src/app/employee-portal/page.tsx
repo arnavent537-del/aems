@@ -84,7 +84,9 @@ export default function EmployeePortalPage() {
 
     setCheckingIn(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+      const localTime = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
       const response = await fetch("/api/attendance/check-in", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -92,6 +94,7 @@ export default function EmployeePortalPage() {
           employeeId: employee.id,
           date: today,
           inLocation: `${location.lat},${location.lng}`,
+          inTime: localTime,
         }),
       });
 
@@ -129,7 +132,9 @@ export default function EmployeePortalPage() {
 
     setCheckingOut(true);
     try {
-      const today = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const today = now.getFullYear() + "-" + String(now.getMonth() + 1).padStart(2, "0") + "-" + String(now.getDate()).padStart(2, "0");
+      const localTime = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
       const response = await fetch("/api/attendance/check-out", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -137,6 +142,7 @@ export default function EmployeePortalPage() {
           employeeId: employee.id,
           date: today,
           outLocation: `${location.lat},${location.lng}`,
+          outTime: localTime,
         }),
       });
 
