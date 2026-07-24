@@ -26,7 +26,7 @@ function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
-type Cell = { status: string; otHours: number; workHours?: number; inTime?: string | null; outTime?: string | null };
+type Cell = { status: string; otHours: number; workHours?: number | null; inTime?: string | null; outTime?: string | null };
 
 export default function AttendancePage() {
   const [clients, setClients] = useState<Client[]>([]);
