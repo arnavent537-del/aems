@@ -33,6 +33,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Auto-set work location on first check-out if none assigned yet (fallback)
+    if (!employee.assignedLocation && outLocation) {
+      await prisma.employee.update({
+        where: { id: employeeId },
+        data: { assignedLocation: outLocation },
+      });
+    }
+
     // Validate location if employee has assigned location
     if (employee.assignedLocation && outLocation) {
       const isValidLocation = validateLocation(employee.assignedLocation, outLocation);
@@ -75,6 +83,12 @@ export async function POST(request: Request) {
       );
     }
 
+    // Find a system user for the createdBy foreign key requirement
+    const systemUser = await prisma.user.findFirst({ where: { role: "admin" } });
+    if (!systemUser) {
+      return NextResponse.json({ error: "No admin user found in the system" }, { status: 500 });
+    }
+
     // Calculate work hours
     const workHours = calculateWorkHours(record.inTime, currentTime);
 
@@ -86,7 +100,7 @@ export async function POST(request: Request) {
         outTime: currentTime,
         outLocation: currentLocation,
         workHours: workHours,
-        createdBy: employeeId,
+        createdBy: systemUser.id,
       },
       include: { employee: { select: { name: true } } },
     });
@@ -129,8 +143,8 @@ function validateLocation(assignedLocation: string, currentLocation: string): bo
 
     const distance = getDistanceInMeters(assignedLat, assignedLng, currentLat, currentLng);
 
-    // Allow within 100 meters
-    return distance <= 100;
+    // Allow check-out within 200 meters (accounts for GPS accuracy variation)
+    return distance <= 200;
   } catch {
     return true; // If parsing fails, allow check-out
   }

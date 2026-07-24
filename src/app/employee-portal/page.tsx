@@ -50,8 +50,15 @@ export default function EmployeePortalPage() {
         },
         (error) => {
           console.error("Error getting location:", error);
-          setToast({ msg: "Please enable location access to mark attendance", type: "error" });
-        }
+          let msg = "Could not get your location.";
+          if (error.code === error.PERMISSION_DENIED) {
+            msg = "Location permission denied. Please allow location access in your browser settings and reload.";
+          } else if (error.code === error.TIMEOUT) {
+            msg = "Location request timed out. Please try again.";
+          }
+          setToast({ msg, type: "error" });
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
       );
     } else {
       setToast({ msg: "Geolocation is not supported by your browser", type: "error" });
@@ -60,8 +67,18 @@ export default function EmployeePortalPage() {
 
   async function handleCheckIn() {
     if (!location) {
-      setToast({ msg: "Getting your location... Please wait", type: "error" });
-      getCurrentLocation();
+      setToast({ msg: "Getting your location... Please wait a moment.", type: "error" });
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+          setLocation(loc);
+          setToast({ msg: "Location acquired. Try check-in again.", type: "success" });
+        },
+        () => {
+          setToast({ msg: "Location unavailable. Please enable location access and try again.", type: "error" });
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
       return;
     }
 
@@ -95,8 +112,18 @@ export default function EmployeePortalPage() {
 
   async function handleCheckOut() {
     if (!location) {
-      setToast({ msg: "Getting your location... Please wait", type: "error" });
-      getCurrentLocation();
+      setToast({ msg: "Getting your location... Please wait a moment.", type: "error" });
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const loc = { lat: position.coords.latitude, lng: position.coords.longitude };
+          setLocation(loc);
+          setToast({ msg: "Location acquired. Try check-out again.", type: "success" });
+        },
+        () => {
+          setToast({ msg: "Location unavailable. Please enable location access and try again.", type: "error" });
+        },
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      );
       return;
     }
 

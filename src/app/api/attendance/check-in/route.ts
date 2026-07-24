@@ -33,6 +33,14 @@ export async function POST(request: Request) {
       );
     }
 
+    // Auto-set work location on first check-in if none assigned yet
+    if (!employee.assignedLocation && inLocation) {
+      await prisma.employee.update({
+        where: { id: employeeId },
+        data: { assignedLocation: inLocation },
+      });
+    }
+
     // Validate location if employee has assigned location
     if (employee.assignedLocation && inLocation) {
       const isValidLocation = validateLocation(employee.assignedLocation, inLocation);
@@ -42,6 +50,12 @@ export async function POST(request: Request) {
           { status: 403 }
         );
       }
+    }
+
+    // Find a system user for the createdBy foreign key requirement
+    const systemUser = await prisma.user.findFirst({ where: { role: "admin" } });
+    if (!systemUser) {
+      return NextResponse.json({ error: "No admin user found in the system" }, { status: 500 });
     }
 
     // Get current time if not provided
@@ -69,7 +83,7 @@ export async function POST(request: Request) {
           status: "P",
           inTime: currentTime,
           inLocation: currentLocation,
-          createdBy: employeeId,
+          createdBy: systemUser.id,
         },
         include: { employee: { select: { name: true } } },
       });
@@ -91,7 +105,7 @@ export async function POST(request: Request) {
         status: "P",
         inTime: currentTime,
         inLocation: currentLocation,
-        createdBy: employeeId,
+        createdBy: systemUser.id,
       },
       include: { employee: { select: { name: true } } },
     });
@@ -116,8 +130,8 @@ function validateLocation(assignedLocation: string, currentLocation: string): bo
 
     const distance = getDistanceInMeters(assignedLat, assignedLng, currentLat, currentLng);
 
-    // Allow check-in within 100 meters
-    return distance <= 100;
+    // Allow check-in within 200 meters (accounts for GPS accuracy variation)
+    return distance <= 200;
   } catch {
     return true; // If parsing fails, allow check-in
   }
