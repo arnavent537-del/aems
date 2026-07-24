@@ -26,7 +26,7 @@ function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
-type Cell = { status: string; otHours: number; workHours?: number | null; inTime?: string | null; outTime?: string | null };
+type Cell = { id?: string; status: string; otHours: number; workHours?: number | null; inTime?: string | null; outTime?: string | null };
 
 export default function AttendancePage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -45,7 +45,7 @@ export default function AttendancePage() {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [arnavClientName, setArnavClientName] = useState<string>("");
 
-  const [popup, setPopup] = useState<{ empId: string; empName: string; ds: string; status: string; ot: number; workHours?: number } | null>(null);
+  const [popup, setPopup] = useState<{ empId: string; empName: string; ds: string; status: string; ot: number; workHours?: number; inTime?: string; outTime?: string; recordId?: string } | null>(null);
 
   const isAdmin = role === "admin" || role === "accountant";
   const isEmployee = role === "employee";
@@ -109,7 +109,7 @@ export default function AttendancePage() {
     api.listAttendance(param).then((recs) => {
       const map: Record<string, Cell> = {};
       for (const r of recs) {
-        map[`${r.employeeId}__${r.date}`] = { status: r.status, otHours: r.otHours, workHours: r.workHours, inTime: r.inTime, outTime: r.outTime };
+        map[`${r.employeeId}__${r.date}`] = { id: r.id, status: r.status, otHours: r.otHours, workHours: r.workHours, inTime: r.inTime, outTime: r.outTime };
       }
       setCells(map);
     });
@@ -160,7 +160,7 @@ export default function AttendancePage() {
       return;
     }
     const c = cells[key(empId, ds)] || { status: "", otHours: 0, workHours: undefined };
-    setPopup({ empId, empName, ds, status: c.status, ot: c.otHours, workHours: c.workHours ?? undefined });
+    setPopup({ empId, empName, ds, status: c.status, ot: c.otHours, workHours: c.workHours ?? undefined, inTime: c.inTime ?? undefined, outTime: c.outTime ?? undefined, recordId: c.id });
   }
 
   function chooseStatus(status: string) {
@@ -609,6 +609,65 @@ export default function AttendancePage() {
                   onChange={(ev) => setPopup({ ...popup, ot: parseFloat(ev.target.value) || 0 })}
                 />
               </label>
+            )}
+            {isAdmin && popup.recordId && clients.find(c => c.id === clientId)?.name === "Arnav Enterprises" && (
+              <div className="border-t border-slate-200 pt-3">
+                <p className="mb-2 text-sm font-semibold text-slate-700">Reset Check-in / Check-out Time</p>
+                <div className="flex gap-3">
+                  <label className="block flex-1">
+                    <span className="mb-1 block text-xs font-medium text-slate-500">In Time</span>
+                    <input
+                      type="time"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                      value={popup.inTime || ""}
+                      onChange={(ev) => setPopup({ ...popup, inTime: ev.target.value || undefined })}
+                    />
+                  </label>
+                  <label className="block flex-1">
+                    <span className="mb-1 block text-xs font-medium text-slate-500">Out Time</span>
+                    <input
+                      type="time"
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                      value={popup.outTime || ""}
+                      onChange={(ev) => setPopup({ ...popup, outTime: ev.target.value || undefined })}
+                    />
+                  </label>
+                </div>
+                {popup.inTime && popup.outTime && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Work hours: {(() => {
+                      const [ih, im] = popup.inTime!.split(":").map(Number);
+                      const [oh, om] = popup.outTime!.split(":").map(Number);
+                      const diff = (oh * 60 + om) - (ih * 60 + im);
+                      if (diff <= 0) return "0.00";
+                      return (diff / 60).toFixed(2);
+                    })()} hrs
+                  </p>
+                )}
+                <Button
+                  variant="secondary"
+                  className="mt-2"
+                  disabled={saving}
+                  onClick={async () => {
+                    setSaving(true);
+                    try {
+                      await api.updateAttendanceTime(popup.recordId!, {
+                        inTime: popup.inTime || null,
+                        outTime: popup.outTime || null,
+                      });
+                      setToast({ msg: "Times updated successfully", type: "success" });
+                      loadAttendance();
+                      loadStats();
+                    } catch (e: any) {
+                      setToast({ msg: e.message || "Failed to update times", type: "error" });
+                    } finally {
+                      setSaving(false);
+                    }
+                  }}
+                >
+                  Update Times
+                </Button>
+              </div>
             )}
           </div>
         )}

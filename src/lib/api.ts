@@ -199,6 +199,16 @@ export const api = {
     return parse<void>(res);
   },
 
+  async updateAttendanceTime(id: string, payload: { inTime?: string | null; outTime?: string | null }): Promise<{ success: boolean; inTime?: string | null; outTime?: string | null; workHours?: number | null }> {
+    const res = await fetch(`/api/attendance/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+    return parse<{ success: boolean; inTime?: string | null; outTime?: string | null; workHours?: number | null }>(res);
+  },
+
   async attendanceStats(clientId: string, month: string): Promise<AttendanceStats> {
     const qs = new URLSearchParams({ clientId, month });
     const res = await fetch(`/api/attendance/stats?${qs.toString()}`, { credentials: "include" });
