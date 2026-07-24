@@ -14,6 +14,8 @@ export default function EmployeesPage() {
   const [clientFilter, setClientFilter] = useState<string>("");
   const [includeExited, setIncludeExited] = useState(false);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [docStatusFilter, setDocStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [role, setRole] = useState<string>("admin");
   const [staffEmployeeId, setStaffEmployeeId] = useState<string | null>(null);
@@ -208,7 +210,16 @@ export default function EmployeesPage() {
   }
 
   const filtered = employees.filter(
-    (e) => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.employeeCode.toLowerCase().includes(search.toLowerCase())
+    (e) => {
+      // Search filter
+      if (search && !e.name.toLowerCase().includes(search.toLowerCase()) && !e.employeeCode.toLowerCase().includes(search.toLowerCase())) return false;
+      // Status filter
+      if (statusFilter === "active" && e.dateOfExit) return false;
+      if (statusFilter === "inactive" && !e.dateOfExit) return false;
+      // Document status filter
+      if (docStatusFilter !== "all" && e.documentStatus !== docStatusFilter) return false;
+      return true;
+    }
   );
 
   return (
@@ -245,7 +256,7 @@ export default function EmployeesPage() {
         )}
       </div>
 
-      <Card className="flex flex-wrap items-center gap-3">
+      <Card className="flex flex-wrap items-end gap-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-slate-500">Client</label>
           <select
@@ -260,7 +271,32 @@ export default function EmployeesPage() {
             ))}
           </select>
         </div>
-        <div className="relative w-1/2 min-w-[200px]">
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-500">Status</label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "inactive")}
+            className={inputClass}
+          >
+            <option value="all">All</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-slate-500">Doc. Status</label>
+          <select
+            value={docStatusFilter}
+            onChange={(e) => setDocStatusFilter(e.target.value)}
+            className={inputClass}
+          >
+            <option value="all">All</option>
+            {DOC_STATUSES.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </div>
+        <div className="relative min-w-[160px] flex-1">
           <label className="mb-1 block text-xs font-medium text-slate-500">Search</label>
           <div className="flex items-center rounded-lg border border-slate-300 px-3">
             <Search className="h-4 w-4 text-slate-400" />
@@ -272,13 +308,13 @@ export default function EmployeesPage() {
             />
           </div>
         </div>
-        <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-600">
+        <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-600 whitespace-nowrap">
           <input
             type="checkbox"
             checked={includeExited}
             onChange={(e) => setIncludeExited(e.target.checked)}
           />
-          Include exited employees
+          Include exited
         </label>
       </Card>
 

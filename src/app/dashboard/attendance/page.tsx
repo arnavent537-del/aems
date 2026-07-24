@@ -4,7 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { Card, Button, Toast, Modal } from "@/components/ui";
 import type { Client, Employee, AttendanceStats } from "@/lib/types";
-import { Save, Download } from "lucide-react";
+import { Save, Download, Search } from "lucide-react";
 
 const STATUSES = ["P", "A", "P/2", "W-O", "PH"];
 const PRESENT = new Set(["P", "P/2", "P-2"]);
@@ -44,6 +44,7 @@ export default function AttendancePage() {
   const [toast, setToast] = useState<{ msg: string; type: "error" | "success" }>({ msg: "", type: "error" });
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [arnavClientName, setArnavClientName] = useState<string>("");
+  const [search, setSearch] = useState("");
 
   const [popup, setPopup] = useState<{ empId: string; empName: string; ds: string; status: string; ot: number; workHours?: number; inTime?: string; outTime?: string; recordId?: string } | null>(null);
 
@@ -55,6 +56,11 @@ export default function AttendancePage() {
   // Check if viewing Arnav as non-admin staff (read-only view)
   const isArnavRestrictedView = role !== "admin" && role !== "employee" && employeeId !== null &&
     clients.find(c => c.id === clientId)?.name === "Arnav Enterprises";
+
+  // Filtered employees for search
+  const filteredEmployees = !isEmployee && isAdmin
+    ? employees.filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.employeeCode.toLowerCase().includes(search.toLowerCase()))
+    : employees;
 
   const loadClients = useCallback(async () => {
     const cl = await api.listClients();
@@ -430,6 +436,20 @@ export default function AttendancePage() {
             />
           </div>
         )}
+        {!isEmployee && isAdmin && (
+          <div className="relative min-w-[180px] flex-1">
+            <label className="mb-1 block text-xs font-medium text-slate-500">Search Employee</label>
+            <div className="flex items-center rounded-lg border border-slate-300 px-3">
+              <Search className="h-4 w-4 text-slate-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Name or code"
+                className="w-full bg-transparent px-2 py-2 text-sm outline-none"
+              />
+            </div>
+          </div>
+        )}
       </Card>
 
       <div className="flex flex-wrap gap-2">
@@ -445,7 +465,7 @@ export default function AttendancePage() {
       <Card className="overflow-x-auto p-0">
         {loading ? (
           <p className="px-4 py-6 text-center text-slate-400">Loading...</p>
-        ) : employees.length === 0 ? (
+        ) : filteredEmployees.length === 0 ? (
           <p className="px-4 py-6 text-center text-slate-400">No active employees for this client.</p>
         ) : tab === "daily" ? (
           <table className="w-full text-sm">
@@ -457,7 +477,7 @@ export default function AttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {employees.map((e) => {
+              {filteredEmployees.map((e) => {
                 const c = cells[key(e.id, date)] || { status: "", otHours: 0 };
                 return (
                   <tr key={e.id} className="border-b border-slate-100">
@@ -496,7 +516,7 @@ export default function AttendancePage() {
               </tr>
             </thead>
             <tbody>
-              {employees.map((e) => (
+              {filteredEmployees.map((e) => (
                 <React.Fragment key={e.id}>
                   <tr className="border-b border-slate-100">
                     <td className="sticky left-0 z-10 bg-white px-4 py-2 text-xs font-medium text-slate-700">
