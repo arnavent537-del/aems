@@ -133,12 +133,13 @@ export default function AttendancePage() {
     }
   }, [clientId, tab, date, month, isEmployee, employees]);
 
-  useEffect(() => {
-    if (!clientId || !isAdmin) {
-      setStats(null);
-      return;
-    }
+  function loadStats() {
+    if (!clientId || !isAdmin) return;
     api.attendanceStats(clientId, month).then(setStats).catch(() => setStats(null));
+  }
+
+  useEffect(() => {
+    loadStats();
   }, [clientId, month, isAdmin]);
 
   function key(empId: string, d: string): string {
@@ -178,6 +179,7 @@ export default function AttendancePage() {
       setToast({ msg: "Attendance saved", type: "success" });
       setPopup(null);
       loadAttendance();
+      loadStats();
     } catch (e: any) {
       setToast({ msg: e.message || "Save failed", type: "error" });
     } finally {
@@ -196,6 +198,7 @@ export default function AttendancePage() {
       setToast({ msg: "Attendance cleared", type: "success" });
       setPopup(null);
       loadAttendance();
+      loadStats();
     } catch (e: any) {
       setToast({ msg: e.message || "Clear failed", type: "error" });
     } finally {
@@ -229,6 +232,7 @@ export default function AttendancePage() {
       await api.saveAttendance(clientId, bulk);
       setToast({ msg: "Attendance saved", type: "success" });
       loadAttendance();
+      loadStats();
     } catch (e: any) {
       setToast({ msg: e.message || "Save failed", type: "error" });
     } finally {
