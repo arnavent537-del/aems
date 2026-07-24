@@ -17,8 +17,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Excel/CSV file is required" }, { status: 400 });
     }
 
+    function excelDateToDDMMYYYY(val: unknown): string {
+      if (!val) return "";
+      if (val instanceof Date && !isNaN(val.getTime())) {
+        const dd = String(val.getDate()).padStart(2, "0");
+        const mm = String(val.getMonth() + 1).padStart(2, "0");
+        const yyyy = val.getFullYear();
+        return `${dd}-${mm}-${yyyy}`;
+      }
+      const s = String(val).trim();
+      // Handle Excel serial number (integer days since 1900-01-01)
+      if (/^\d+$/.test(s) && s.length <= 5) {
+        const d = new Date((parseInt(s, 10) - 25569) * 86400 * 1000);
+        if (!isNaN(d.getTime())) {
+          const dd = String(d.getDate()).padStart(2, "0");
+          const mm = String(d.getMonth() + 1).padStart(2, "0");
+          const yyyy = d.getFullYear();
+          return `${dd}-${mm}-${yyyy}`;
+        }
+      }
+      return s;
+    }
+
     const buffer = Buffer.from(await (file as Blob).arrayBuffer());
-    const workbook = XLSX.read(buffer, { type: "buffer" });
+    const workbook = XLSX.read(buffer, { type: "buffer", cellDates: true });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" }) as Record<string, any>[];
 
@@ -36,7 +58,7 @@ export async function POST(request: Request) {
       // Required fields
       const clientName = String(row.Client || "").trim();
       const name = String(row.Name || "").trim();
-      const dateOfJoining = String(row.DateOfJoining || "").trim();
+      const dateOfJoining = excelDateToDDMMYYYY(row.DateOfJoining);
       const salaryRate = parseFloat(row.SalaryRate || "0");
 
       if (!clientName || !name || !dateOfJoining || isNaN(salaryRate)) {
@@ -59,7 +81,7 @@ export async function POST(request: Request) {
       const safetyApronIssued = uniformValue === "yes" || uniformValue === "true" || uniformValue === "1";
 
       // Parse Date of Exit
-      const dateOfExit = String(row.DateofExit || row.DateOfExit || "").trim() || null;
+      const dateOfExit = excelDateToDDMMYYYY(row.DateofExit || row.DateOfExit) || null;
 
       await prisma.employee.create({
         data: {
@@ -67,7 +89,7 @@ export async function POST(request: Request) {
           clientId: client.id,
           name,
           gender: String(row.Gender || "").trim() || null,
-          dob: String(row.DOB || "").trim(),
+          dob: excelDateToDDMMYYYY(row.DOB),
           dateOfJoining,
           phoneNo: String(row.MobileNo || row.MobileNo || "").trim() || null,
           address: String(row.Address || "").trim(),
