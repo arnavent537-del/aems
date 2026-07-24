@@ -96,7 +96,7 @@ export default function AttendancePage() {
       .finally(() => setLoading(false));
   }, [clientId, isEmployee]);
 
-  useEffect(() => {
+  function loadAttendance() {
     if (!clientId) return;
     const myId = isEmployee ? employees[0]?.id : undefined;
     const param = tab === "daily"
@@ -113,6 +113,10 @@ export default function AttendancePage() {
       }
       setCells(map);
     });
+  }
+
+  useEffect(() => {
+    loadAttendance();
 
     if (tab === "monthly" && !isEmployee) {
       api.listAdvances({ clientId }).then((advs) => {
@@ -173,6 +177,7 @@ export default function AttendancePage() {
       setCell(popup.empId, popup.ds, { status: popup.status, otHours: canEditOt ? popup.ot : 0 });
       setToast({ msg: "Attendance saved", type: "success" });
       setPopup(null);
+      loadAttendance();
     } catch (e: any) {
       setToast({ msg: e.message || "Save failed", type: "error" });
     } finally {
@@ -190,6 +195,7 @@ export default function AttendancePage() {
       setCell(popup.empId, popup.ds, { status: "", otHours: 0 });
       setToast({ msg: "Attendance cleared", type: "success" });
       setPopup(null);
+      loadAttendance();
     } catch (e: any) {
       setToast({ msg: e.message || "Clear failed", type: "error" });
     } finally {
@@ -222,6 +228,7 @@ export default function AttendancePage() {
       }
       await api.saveAttendance(clientId, bulk);
       setToast({ msg: "Attendance saved", type: "success" });
+      loadAttendance();
     } catch (e: any) {
       setToast({ msg: e.message || "Save failed", type: "error" });
     } finally {
@@ -475,8 +482,6 @@ export default function AttendancePage() {
                     {d}
                   </th>
                 ))}
-                <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">In</th>
-                <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">Out</th>
                 <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">Days Present</th>
                 <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">Total OT</th>
                 {showSalary && <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">Monthly Salary</th>}
@@ -499,7 +504,7 @@ export default function AttendancePage() {
                       const ds = `${month}-${String(d).padStart(2, "0")}`;
                       const c = cells[key(e.id, ds)] || { status: "", otHours: 0 };
                       return (
-                        <td key={d} className="px-1 py-1 text-center">
+                        <td key={d} className="px-0.5 py-1 text-center align-top">
                           <button
                             onClick={() => openPopup(e.id, e.name, ds)}
                             className={`h-7 w-14 rounded text-xs font-medium ${c.status ? STATUS_COLORS[c.status] : "bg-slate-100 text-slate-500"}`}
@@ -507,30 +512,15 @@ export default function AttendancePage() {
                           >
                             {c.status || "·"}
                           </button>
+                          {c.inTime && (
+                            <div className="mt-0.5 text-[9px] text-slate-500 leading-tight">{c.inTime}</div>
+                          )}
+                          {c.outTime && (
+                            <div className="text-[9px] text-slate-400 leading-tight">-{c.outTime}</div>
+                          )}
                         </td>
                       );
                     })}
-                    <td className="px-2 py-1 text-center text-[11px] text-slate-600 whitespace-nowrap">
-                      {(() => {
-                        // Show the most recent inTime from any day this month
-                        for (let d = dayCount; d >= 1; d--) {
-                          const ds = `${month}-${String(d).padStart(2, "0")}`;
-                          const c = cells[key(e.id, ds)];
-                          if (c?.inTime) return c.inTime;
-                        }
-                        return "—";
-                      })()}
-                    </td>
-                    <td className="px-2 py-1 text-center text-[11px] text-slate-600 whitespace-nowrap">
-                      {(() => {
-                        for (let d = dayCount; d >= 1; d--) {
-                          const ds = `${month}-${String(d).padStart(2, "0")}`;
-                          const c = cells[key(e.id, ds)];
-                          if (c?.outTime) return c.outTime;
-                        }
-                        return "—";
-                      })()}
-                    </td>
                     <td className="px-2 py-1 text-center text-sm font-semibold text-emerald-700">{daysPresent(e.id)}</td>
                     <td className="px-2 py-1 text-center text-sm font-semibold text-indigo-700">{totalOt(e.id)}</td>
                     {showSalary && <td className="px-2 py-1 text-center text-sm text-slate-600">₹{presentSalary(e.id)}</td>}
