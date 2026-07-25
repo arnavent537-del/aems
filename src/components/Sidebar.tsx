@@ -49,12 +49,10 @@ export default function Sidebar({ user, onClose }: { user: SessionUser; onClose?
   return (
     <aside className="flex h-full w-64 flex-col bg-slate-900 text-slate-100">
       <div className="flex items-center gap-2 border-b border-slate-800 px-5 py-5">
-        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-500">
-          <Building2 className="h-5 w-5" />
-        </div>
+        <img src="/logo.jpg" alt="Logo" className="h-9 w-9 rounded-lg object-cover" />
         <div>
-          <p className="text-sm font-bold leading-tight">AEMS</p>
-          <p className="text-[11px] text-slate-400">Arnav Enterprises</p>
+          <p className="text-[10px] font-medium leading-tight text-slate-400">AEMS</p>
+          <p className="text-sm font-bold leading-tight">Arnav Enterprises</p>
         </div>
       </div>
 

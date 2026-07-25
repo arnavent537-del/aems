@@ -51,7 +51,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button onClick={() => setMobileOpen(true)} className="rounded p-1 text-slate-600 hover:bg-slate-100">
             <Menu className="h-6 w-6" />
           </button>
-          <span className="font-semibold text-slate-800">AEMS</span>
+          <img src="/logo.jpg" alt="Logo" className="h-7 w-7 rounded object-cover" />
+          <div>
+            <span className="text-[9px] text-slate-400">AEMS</span>
+            <span className="ml-2 text-xs font-bold text-slate-800">Arnav Enterprises</span>
+          </div>
         </header>
         <main className="flex-1 p-4 sm:p-6">{children}</main>
       </div>
