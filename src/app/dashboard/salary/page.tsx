@@ -239,6 +239,7 @@ export default function SalaryPage() {
     "Adv Ded",
     "Other Ded",
     "Net Paid",
+    "Payment Date",
   ].filter(Boolean) as string[];
 
   return (
@@ -375,6 +376,7 @@ export default function SalaryPage() {
                   <td className="px-4 py-3 text-right text-slate-600">₹{s.advanceDeduction}</td>
                   <td className="px-4 py-3 text-right text-slate-600">₹{s.otherDeductions}</td>
                   <td className="px-4 py-3 text-right font-semibold text-emerald-700">₹{s.netPaid}</td>
+                  <td className="px-4 py-3 text-slate-600">{s.paymentDate || "—"}</td>
                   {canEdit && !isArnavRestrictedView && (
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">

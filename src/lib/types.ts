@@ -89,6 +89,7 @@ export interface AdvanceRecord {
   type: string;
   remarks: string | null;
   status: string;
+  paymentDate?: string | null;
   approvedBy?: string | null;
   approvedAt?: string | null;
   processedBy?: string | null;
@@ -114,6 +115,7 @@ export interface SalaryRecord {
   advanceDeduction: number;
   otherDeductions: number;
   netPaid: number;
+  paymentDate?: string | null;
   employee?: { employeeCode: string; name: string; salaryRate: number; otRateMultiplier: number };
   client?: { name: string; pfApplicable: boolean; esicApplicable: boolean; ptApplicable: boolean };
 }

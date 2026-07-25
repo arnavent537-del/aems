@@ -170,7 +170,7 @@ export default function AdvancesPage() {
     window.location.href = `/api/advances/export?${qs.toString()}`;
   }
 
-  const colCount = canEdit && !isArnavRestrictedView ? 8 : 7;
+  const colCount = canEdit && !isArnavRestrictedView ? 9 : 8;
 
   return (
     <div className="space-y-5">
@@ -269,6 +269,7 @@ export default function AdvancesPage() {
               <th className="px-4 py-3 text-right">Amount</th>
               <th className="px-4 py-3 text-right">Running Balance</th>
               <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3">Payment Date</th>
               <th className="px-4 py-3">Remarks</th>
               {canEdit && !isArnavRestrictedView && <th className="px-4 py-3 text-right">Actions</th>}
             </tr>
@@ -304,6 +305,7 @@ export default function AdvancesPage() {
                     {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
                   </Badge>
                 </td>
+                <td className="px-4 py-3 text-slate-600">{a.paymentDate || "—"}</td>
                 <td className="px-4 py-3 text-slate-500">{a.remarks || "—"}</td>
                 {canEdit && !isArnavRestrictedView && (
                   <td className="px-4 py-3">

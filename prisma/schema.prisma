@@ -144,6 +144,7 @@ model Advance {
   type         String    // 'given' or 'recovery'
   remarks      String?
   status       String    @default("pending") // pending → approved → paid | hold | rejected
+  paymentDate  String?   // YYYY-MM-DD when payment was made
   approvedBy   String?
   approver     User?     @relation("ApprovedAdvances", fields: [approvedBy], references: [id])
   approvedAt   DateTime?
@@ -172,6 +173,7 @@ model Salary {
   advanceDeduction   Float    @default(0.0)
   otherDeductions   Float    @default(0.0)
   netPaid           Float
+  paymentDate       String?  // YYYY-MM-DD when salary was paid
   createdBy         String
   createdByUser     User     @relation(fields: [createdBy], references: [id])
   createdAt         DateTime @default(now())
