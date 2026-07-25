@@ -18,6 +18,20 @@ export interface Client {
   createdAt: string;
 }
 
+export interface EmployeeLocation {
+  id: string;
+  employeeId: string;
+  locationName: string;
+  latitude: string;
+  longitude: string;
+  inTime?: string | null;
+  outTime?: string | null;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Employee {
   id: string;
   employeeCode: string;
@@ -46,6 +60,7 @@ export interface Employee {
   salaryRate: number;
   otRateMultiplier: number;
   assignedLocation?: string | null;
+  locations?: EmployeeLocation[];
   client?: { name: string };
   isRegistered?: boolean;
 }

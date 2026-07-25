@@ -76,6 +76,39 @@ async function main() {
     console.log(`Created employee: ${e.name} (${empCode})`);
   }
 
+  // 3. Add multiple locations for Sandip Patole (supervisor working at 2 sites)
+  const sandipId = employeeRecords['Sandip Patole'];
+  if (sandipId) {
+    // Delete any existing locations for Sandip first
+    await prisma.employeeLocation.deleteMany({ where: { employeeId: sandipId } });
+
+    await prisma.employeeLocation.createMany({
+      data: [
+        {
+          employeeId: sandipId,
+          locationName: 'Ashtvinayak 2',
+          latitude: '18.5204',
+          longitude: '73.8567',
+          inTime: '09:00',
+          outTime: '18:00',
+          isDefault: true,
+          sortOrder: 0,
+        },
+        {
+          employeeId: sandipId,
+          locationName: 'Infinity Site',
+          latitude: '18.5300',
+          longitude: '73.8400',
+          inTime: '08:30',
+          outTime: '17:30',
+          isDefault: false,
+          sortOrder: 1,
+        },
+      ],
+    });
+    console.log('Added 2 locations for Sandip Patole');
+  }
+
   // 3. Create Users
   const userData = [
     { username: 'admin', passwordHash: hashPassword('admin123'), role: 'admin', assignedClientId: null },

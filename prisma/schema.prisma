@@ -91,8 +91,24 @@ model Employee {
   attendance         Attendance[]
   advances       Advance[]
   salaries       Salary[]
-  assignedLocation   String?      // assigned work location (lat,lng) for Arnav employees
+  assignedLocation   String?      // DEPRECATED - use locations relation instead
+  locations          EmployeeLocation[] // multiple work locations with shift timings
   user               User?        // staff user linked to this employee record
+}
+
+model EmployeeLocation {
+  id           String   @id @default(uuid())
+  employeeId   String
+  employee     Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  locationName String   // site name e.g. "Ashtvinayak 2"
+  latitude     String   // GPS latitude
+  longitude    String   // GPS longitude
+  inTime       String?  // Expected in time HH:MM
+  outTime      String?  // Expected out time HH:MM
+  isDefault    Boolean  @default(false) // primary/default location
+  sortOrder    Int      @default(0)     // display ordering
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Attendance {

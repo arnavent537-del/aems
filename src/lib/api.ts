@@ -2,6 +2,7 @@ import type {
   SessionUser,
   Client,
   Employee,
+  EmployeeLocation,
   AttendanceRecord,
   AdvanceRecord,
   SalaryRecord,
@@ -172,6 +173,39 @@ export const api = {
       credentials: "include",
     });
     return parse<{ created: number; codes: string[]; errors: string[] }>(res);
+  },
+
+  async getEmployeeLocations(employeeId: string): Promise<EmployeeLocation[]> {
+    const res = await fetch(`/api/employees/${employeeId}/locations`, { credentials: "include" });
+    return parse<EmployeeLocation[]>(res);
+  },
+
+  async createEmployeeLocation(employeeId: string, location: Partial<EmployeeLocation>): Promise<EmployeeLocation> {
+    const res = await fetch(`/api/employees/${employeeId}/locations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(location),
+      credentials: "include",
+    });
+    return parse<EmployeeLocation>(res);
+  },
+
+  async updateEmployeeLocations(employeeId: string, locations: Partial<EmployeeLocation>[]): Promise<EmployeeLocation[]> {
+    const res = await fetch(`/api/employees/${employeeId}/locations`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locations }),
+      credentials: "include",
+    });
+    return parse<EmployeeLocation[]>(res);
+  },
+
+  async deleteEmployeeLocation(employeeId: string, locationId: string): Promise<void> {
+    const res = await fetch(`/api/employees/${employeeId}/locations?locationId=${locationId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    return parse<void>(res);
   },
 
   async listAttendance(params: { clientId?: string; employeeId?: string; date?: string; month?: string }): Promise<AttendanceRecord[]> {

@@ -26,7 +26,7 @@ function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
 
-type Cell = { id?: string; status: string; otHours: number; workHours?: number | null; inTime?: string | null; outTime?: string | null };
+type Cell = { id?: string; status: string; otHours: number; workHours?: number | null; inTime?: string | null; outTime?: string | null; locationName?: string | null };
 
 export default function AttendancePage() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -112,10 +112,45 @@ export default function AttendancePage() {
       : isEmployee
         ? { employeeId: myId, month }
         : { clientId, month };
-    api.listAttendance(param).then((recs) => {
+
+    // Load attendance and employee locations in parallel
+    const arnavEmployees = employees.filter((e) =>
+      clients.find((c) => c.id === e.clientId)?.name === "Arnav Enterprises"
+    );
+    const locationsPromise = arnavEmployees.length > 0 && tab === "monthly"
+      ? Promise.all(arnavEmployees.map((e) =>
+          api.getEmployeeLocations(e.id).catch(() => [])
+        )).then((locArrays) => {
+          const empLocationsMap: Record<string, { latitude: string; longitude: string; locationName: string }[]> = {};
+          arnavEmployees.forEach((e, idx) => {
+            empLocationsMap[e.id] = locArrays[idx];
+          });
+          return empLocationsMap;
+        })
+      : Promise.resolve({} as Record<string, { latitude: string; longitude: string; locationName: string }[]>);
+
+    Promise.all([api.listAttendance(param), locationsPromise]).then(([recs, empLocationsMap]) => {
       const map: Record<string, Cell> = {};
       for (const r of recs) {
-        map[`${r.employeeId}__${r.date}`] = { id: r.id, status: r.status, otHours: r.otHours, workHours: r.workHours, inTime: r.inTime, outTime: r.outTime };
+        let locationName: string | null = null;
+        // Try to match inLocation against employee's defined locations
+        if (r.inLocation && empLocationsMap && empLocationsMap[r.employeeId]) {
+          const empLocs = empLocationsMap[r.employeeId];
+          const matchedLoc = empLocs.find((loc) => {
+            const [lat, lng] = r.inLocation!.split(",").map((s) => s.trim());
+            return loc.latitude === lat && loc.longitude === lng;
+          });
+          if (matchedLoc) locationName = matchedLoc.locationName;
+        }
+        map[`${r.employeeId}__${r.date}`] = {
+          id: r.id,
+          status: r.status,
+          otHours: r.otHours,
+          workHours: r.workHours,
+          inTime: r.inTime,
+          outTime: r.outTime,
+          locationName,
+        };
       }
       setCells(map);
     });
@@ -541,6 +576,9 @@ export default function AttendancePage() {
                           )}
                           {c.outTime && (
                             <div className="text-[9px] text-slate-400 leading-tight">-{c.outTime}</div>
+                          )}
+                          {c.locationName && (
+                            <div className="mt-0.5 text-[8px] text-indigo-400 leading-tight truncate max-w-[4rem] mx-auto">{c.locationName}</div>
                           )}
                         </td>
                       );

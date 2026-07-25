@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { Card, Badge, Button, Modal, Field, inputClass, Toast } from "@/components/ui";
-import type { Client, Employee } from "@/lib/types";
+import type { Client, Employee, EmployeeLocation } from "@/lib/types";
 import { Plus, Pencil, Trash2, LogOut, UserCheck, Search, Upload, KeyRound, Download } from "lucide-react";
 
 const DOC_STATUSES = ["Pending", "Submitted", "Verified"];
@@ -33,6 +33,12 @@ export default function EmployeesPage() {
   const [resetPwEmployee, setResetPwEmployee] = useState<Employee | null>(null);
   const [resetPwValue, setResetPwValue] = useState("");
   const [resettingPw, setResettingPw] = useState(false);
+
+  // Location management for Arnav employees
+  const [locations, setLocations] = useState<EmployeeLocation[]>([]);
+  const [locationForm, setLocationForm] = useState<{ locationName: string; latitude: string; longitude: string; inTime: string; outTime: string; isDefault: boolean }>({
+    locationName: "", latitude: "", longitude: "", inTime: "", outTime: "", isDefault: false,
+  });
 
   const canEdit = role === "admin" || role === "accountant";
   const isArnavRestrictedView = role !== "admin" && staffEmployeeId !== null &&
@@ -75,13 +81,20 @@ export default function EmployeesPage() {
       otRateMultiplier: 2,
       salaryRate: 0,
     });
+    setLocations([]);
     setModalOpen(true);
   }
 
   function openEdit(emp: Employee) {
     setEditing(emp);
     setForm({ ...emp });
+    setLocations([]);
     setModalOpen(true);
+    // Load locations for Arnav employees
+    const clientName = clients.find((c) => c.id === emp.clientId)?.name;
+    if (clientName === "Arnav Enterprises") {
+      api.getEmployeeLocations(emp.id).then(setLocations).catch(() => {});
+    }
   }
 
   async function save() {
@@ -98,20 +111,13 @@ export default function EmployeesPage() {
         setToast({ msg: "Employee created", type: "success" });
       }
 
-      // Save location separately for Arnav Enterprises employees
-      if (empId && form.assignedLocation) {
-        const client = clients.find((c) => c.id === form.clientId);
-        if (client?.name === "Arnav Enterprises") {
-          try {
-            await fetch("/api/employees/location", {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ employeeId: empId, location: form.assignedLocation }),
-              credentials: "include",
-            });
-          } catch {
-            // Location save is secondary; don't block the main save
-          }
+      // Save locations for Arnav Enterprises employees
+      const client = clients.find((c) => c.id === form.clientId);
+      if (empId && client?.name === "Arnav Enterprises" && locations.length > 0) {
+        try {
+          await api.updateEmployeeLocations(empId, locations);
+        } catch {
+          // Location save is secondary; don't block the main save
         }
       }
 
@@ -433,7 +439,7 @@ export default function EmployeesPage() {
       <Modal
         open={modalOpen}
         title={editing ? "Edit Employee" : "Add Employee"}
-        onClose={() => setModalOpen(false)}
+        onClose={() => { setModalOpen(false); setLocations([]); }}
         width="max-w-3xl"
         footer={
           <>
@@ -537,17 +543,137 @@ export default function EmployeesPage() {
           </Field>
           {clients.find((c) => c.id === form.clientId)?.name === "Arnav Enterprises" && (
             <div className="col-span-1 sm:col-span-2 border-t border-slate-200 pt-4 mt-2">
-              <p className="text-sm font-medium text-slate-600 mb-3">Work Location (Arnav Enterprises)</p>
-              <Field label="Assigned Location (lat,lng)">
-                <input
-                  className={inputClass}
-                  placeholder="e.g. 18.5204,73.8567"
-                  value={form.assignedLocation || ""}
-                  onChange={(e) => setForm({ ...form, assignedLocation: e.target.value })}
-                />
-              </Field>
-              <p className="mt-1 text-xs text-slate-400">
-                Employee must be within 100 meters of this location to check in/out. Get coordinates from Google Maps.
+              <p className="text-sm font-medium text-slate-600 mb-3">Work Locations (Arnav Enterprises)</p>
+
+              {/* Existing locations list */}
+              {locations.length > 0 && (
+                <div className="space-y-2 mb-3">
+                  {locations.map((loc, idx) => (
+                    <div key={loc.id} className="flex items-center justify-between rounded-lg border border-slate-200 p-2 text-sm">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-slate-700 truncate">{loc.locationName}</span>
+                          {loc.isDefault && (
+                            <span className="rounded bg-indigo-100 px-1.5 py-0.5 text-[10px] font-medium text-indigo-700">Default</span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          GPS: {loc.latitude}, {loc.longitude}
+                          {loc.inTime && ` | In: ${loc.inTime}`}
+                          {loc.outTime && ` | Out: ${loc.outTime}`}
+                        </div>
+                      </div>
+                      <div className="flex gap-1 ml-2">
+                        <button
+                          type="button"
+                          className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                          title="Set as default"
+                          onClick={() => {
+                            const updated = locations.map((l, i) => ({ ...l, isDefault: i === idx }));
+                            setLocations(updated);
+                          }}
+                        >
+                          <svg className="h-4 w-4" fill={loc.isDefault ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                          </svg>
+                        </button>
+                        <button
+                          type="button"
+                          className="rounded p-1 text-red-400 hover:bg-red-50 hover:text-red-600"
+                          title="Delete location"
+                          onClick={() => setLocations(locations.filter((_, i) => i !== idx))}
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add new location form */}
+              <div className="rounded-lg border border-dashed border-slate-300 p-3">
+                <p className="text-xs font-medium text-slate-500 mb-2">Add New Location</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    className={inputClass}
+                    placeholder="Location name"
+                    value={locationForm.locationName}
+                    onChange={(e) => setLocationForm({ ...locationForm, locationName: e.target.value })}
+                  />
+                  <div className="flex gap-1">
+                    <input
+                      className={inputClass + " flex-1"}
+                      placeholder="Latitude"
+                      value={locationForm.latitude}
+                      onChange={(e) => setLocationForm({ ...locationForm, latitude: e.target.value })}
+                    />
+                    <input
+                      className={inputClass + " flex-1"}
+                      placeholder="Longitude"
+                      value={locationForm.longitude}
+                      onChange={(e) => setLocationForm({ ...locationForm, longitude: e.target.value })}
+                    />
+                  </div>
+                  <input
+                    type="time"
+                    className={inputClass}
+                    value={locationForm.inTime}
+                    onChange={(e) => setLocationForm({ ...locationForm, inTime: e.target.value })}
+                    title="Expected In Time"
+                  />
+                  <input
+                    type="time"
+                    className={inputClass}
+                    value={locationForm.outTime}
+                    onChange={(e) => setLocationForm({ ...locationForm, outTime: e.target.value })}
+                    title="Expected Out Time"
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-2">
+                  <label className="flex items-center gap-2 text-xs text-slate-600">
+                    <input
+                      type="checkbox"
+                      checked={locationForm.isDefault}
+                      onChange={(e) => setLocationForm({ ...locationForm, isDefault: e.target.checked })}
+                      className="rounded"
+                    />
+                    Set as default
+                  </label>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                    disabled={!locationForm.locationName || !locationForm.latitude || !locationForm.longitude}
+                    onClick={() => {
+                      if (!locationForm.locationName || !locationForm.latitude || !locationForm.longitude) return;
+                      setLocations([
+                        ...locations,
+                        {
+                          id: `temp-${Date.now()}`,
+                          employeeId: editing?.id || "",
+                          locationName: locationForm.locationName,
+                          latitude: locationForm.latitude,
+                          longitude: locationForm.longitude,
+                          inTime: locationForm.inTime || null,
+                          outTime: locationForm.outTime || null,
+                          isDefault: locationForm.isDefault,
+                          sortOrder: locations.length,
+                          createdAt: new Date().toISOString(),
+                          updatedAt: new Date().toISOString(),
+                        },
+                      ]);
+                      setLocationForm({ locationName: "", latitude: "", longitude: "", inTime: "", outTime: "", isDefault: false });
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              <p className="mt-2 text-[11px] text-slate-400">
+                Employee must be within 200 meters of a location to check in/out. Get coordinates from Google Maps.
               </p>
             </div>
           )}
