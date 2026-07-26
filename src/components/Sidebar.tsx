@@ -13,6 +13,7 @@ import {
   LogOut,
   Building2,
   Smartphone,
+  Activity,
 } from "lucide-react";
 import type { SessionUser } from "@/lib/types";
 
@@ -32,6 +33,7 @@ const MENU: MenuItem[] = [
   { href: "/dashboard/clients", label: "Clients", icon: Building2, roles: ["admin"] },
   { href: "/dashboard/compliance", label: "Compliance", icon: ShieldCheck, roles: ["admin", "accountant"] },
   { href: "/dashboard/users", label: "Users", icon: UserCog, roles: ["admin"] },
+  { href: "/dashboard/activity-log", label: "Activity Log", icon: Activity, roles: ["admin"] },
   { href: "/employee-portal", label: "Check In / Out", icon: Smartphone, roles: ["employee"] },
 ];
 
