@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 /** Normalise a phone number to E.164 (+91 India). Accepts 10-digit or prefixed. */
 function formatPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -10,8 +12,8 @@ function formatPhone(phone: string): string {
 export async function sendSms(to: string, message: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const enabled = process.env.TWILIO_ENABLED === "true";
+    console.log(`[SMS] TWILIO_ENABLED=${process.env.TWILIO_ENABLED}, resolved=${enabled}`);
     if (!enabled) {
-      // Not configured — log for dev and return ok=false so callers can return dev OTP
       console.log(`SMS disabled. Would send to ${to}: ${message}`);
       return { ok: false };
     }
@@ -23,11 +25,14 @@ export async function sendSms(to: string, message: string): Promise<{ ok: boolea
     const from = process.env.TWILIO_FROM;
 
     if (!accountSid || !authToken || !from) {
+      console.error("[SMS] Twilio not fully configured:", { accountSid: !!accountSid, authToken: !!authToken, from });
       return { ok: false, error: "Twilio not fully configured" };
     }
 
+    console.log(`[SMS] Sending to ${formatPhone(to)} from ${from}`);
     const client = Twilio(accountSid, authToken);
     await client.messages.create({ body: message, from, to: formatPhone(to) });
+    console.log(`[SMS] Sent successfully to ${formatPhone(to)}`);
     return { ok: true };
   } catch (err: any) {
     console.error("sendSms error:", err?.message || err);
