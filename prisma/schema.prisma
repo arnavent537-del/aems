@@ -199,6 +199,19 @@ model Compliance {
   @@unique([clientId, month])
 }
 
+model OtpRecord {
+  id        String   @id @default(uuid())
+  phone     String
+  otp       String
+  purpose   String   // 'signup' | 'login' | 'password_reset'
+  attempts  Int      @default(0)
+  verified  Boolean  @default(false)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([phone, purpose])
+}
+
 model AuditTrail {
   id        String   @id @default(uuid())
   userId    String

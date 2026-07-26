@@ -1,3 +1,12 @@
+/** Normalise a phone number to E.164 (+91 India). Accepts 10-digit or prefixed. */
+function formatPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.length === 10) return `+91${digits}`;
+  if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+  if (digits.startsWith("0")) return `+91${digits.slice(1)}`;
+  return digits.startsWith("+") ? `+${digits.slice(1)}` : phone;
+}
+
 export async function sendSms(to: string, message: string): Promise<{ ok: boolean; error?: string }> {
   try {
     const enabled = process.env.TWILIO_ENABLED === "true";
@@ -18,7 +27,7 @@ export async function sendSms(to: string, message: string): Promise<{ ok: boolea
     }
 
     const client = Twilio(accountSid, authToken);
-    await client.messages.create({ body: message, from, to });
+    await client.messages.create({ body: message, from, to: formatPhone(to) });
     return { ok: true };
   } catch (err: any) {
     console.error("sendSms error:", err?.message || err);

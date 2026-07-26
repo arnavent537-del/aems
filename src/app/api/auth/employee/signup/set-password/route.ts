@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
     }
 
-    if (!isPhoneVerified(phone.trim())) {
+    if (!await isPhoneVerified(phone.trim(), "signup")) {
       return NextResponse.json(
         { error: "Mobile number not verified. Please verify your OTP first." },
         { status: 403 }
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     }
 
     if (employee.passwordHash) {
-      consumeVerification(phone.trim());
+      consumeVerification(phone.trim(), "signup");
       return NextResponse.json({ error: "This mobile number is already registered." }, { status: 409 });
     }
 
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       data: { passwordHash: hashPassword(password) },
     });
 
-    consumeVerification(phone.trim());
+    await consumeVerification(phone.trim(), "signup");
 
     return NextResponse.json({ success: true, message: "Password created successfully." });
   } catch (error: any) {

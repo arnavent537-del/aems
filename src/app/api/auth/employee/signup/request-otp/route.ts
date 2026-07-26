@@ -31,7 +31,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const otp = generateOtp(clean);
+    const otp = await generateOtp(clean, "signup");
 
     const message = `Your AEMS verification code is ${otp}. It is valid for 5 minutes.`;
     const sendResult = await sendSms(clean, message);

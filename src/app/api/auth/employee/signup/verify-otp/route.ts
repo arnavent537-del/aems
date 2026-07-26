@@ -8,7 +8,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Mobile number and OTP are required" }, { status: 400 });
     }
 
-    const result = verifyOtp(phone.trim(), String(otp).trim());
+    const result = await verifyOtp(phone.trim(), String(otp).trim(), "signup");
     if (!result.ok) {
       return NextResponse.json({ error: result.reason || "Invalid OTP" }, { status: 400 });
     }

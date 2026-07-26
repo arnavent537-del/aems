@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Password must be at least 6 characters" }, { status: 400 });
     }
 
-    const result = verifyOtp(phone.trim(), String(otp).trim());
+    const result = await verifyOtp(phone.trim(), String(otp).trim(), "password_reset");
     if (!result.ok) {
       return NextResponse.json({ error: result.reason || "Invalid OTP" }, { status: 400 });
     }
@@ -27,7 +27,7 @@ export async function POST(request: Request) {
     await prisma.employee.update({ where: { id: employee.id }, data: { passwordHash: hashPassword(password) } });
 
     // Consume verification so OTP can't be reused
-    consumeVerification(phone.trim());
+    await consumeVerification(phone.trim(), "password_reset");
 
     // Non-blocking audit trail (won't fail the request)
     try {

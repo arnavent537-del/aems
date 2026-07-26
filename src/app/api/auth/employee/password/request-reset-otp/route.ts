@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "This mobile number is not registered with us." }, { status: 404 });
     }
 
-    const otp = generateOtp(clean);
+    const otp = await generateOtp(clean, "password_reset");
     const message = `Your AEMS password reset code is ${otp}. It is valid for 5 minutes.`;
     const sendResult = await sendSms(clean, message);
 
