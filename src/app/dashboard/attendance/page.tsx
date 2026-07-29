@@ -5,6 +5,13 @@ import { api } from "@/lib/api";
 import { Card, Button, Toast, Modal } from "@/components/ui";
 import type { Client, Employee, AttendanceStats } from "@/lib/types";
 import { Save, Download, Search } from "lucide-react";
+import {
+  getTbkStartDate,
+  getTbkEndDate,
+  getTbkDates,
+  getTbkDaysInMonth,
+  getCurrentTbkMonth,
+} from "@/lib/tbkMonth";
 
 const STATUSES = ["P", "A", "P/2", "W-O", "PH"];
 const PRESENT = new Set(["P", "P/2", "P-2"]);
@@ -34,7 +41,7 @@ export default function AttendancePage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [tab, setTab] = useState<"daily" | "monthly">("daily");
   const [date, setDate] = useState(todayStr());
-  const [month, setMonth] = useState(todayStr().slice(0, 7));
+  const [month, setMonth] = useState(getCurrentTbkMonth());
   const [cells, setCells] = useState<Record<string, Cell>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -162,8 +169,10 @@ export default function AttendancePage() {
     if (tab === "monthly" && !isEmployee) {
       api.listAdvances({ clientId }).then((advs) => {
         const byEmp: Record<string, number> = {};
+        const tbkStart = getTbkStartDate(month);
+        const tbkEnd = getTbkEndDate(month);
         for (const a of advs) {
-          if (!a.date.startsWith(month)) continue;
+          if (a.date < tbkStart || a.date > tbkEnd) continue;
           const signed = a.type === "recovery" ? -Math.abs(a.amount) : Math.abs(a.amount);
           byEmp[a.employeeId] = (byEmp[a.employeeId] || 0) + signed;
         }
@@ -260,11 +269,9 @@ export default function AttendancePage() {
           if (c?.status) pushCell(e.id, date, c);
         }
       } else {
-        const [y, m] = month.split("-").map(Number);
-        const total = daysInMonth(y, m);
+        const dates = getTbkDates(month);
         for (const e of employees) {
-          for (let d = 1; d <= total; d++) {
-            const ds = `${month}-${String(d).padStart(2, "0")}`;
+          for (const ds of dates) {
             const c = cells[key(e.id, ds)];
             if (c?.status) pushCell(e.id, ds, c);
           }
@@ -286,9 +293,8 @@ export default function AttendancePage() {
     window.location.href = `/api/attendance/export?${qs.toString()}`;
   }
 
-  const y = Number(month.split("-")[0]);
-  const m = Number(month.split("-")[1]);
-  const dayCount = daysInMonth(y, m);
+  const tbkDates = getTbkDates(month);
+  const dayCount = getTbkDaysInMonth(month);
   const dayLabels = Array.from({ length: dayCount }, (_, i) => i + 1);
 
   function dayValue(status: string): number {
@@ -300,8 +306,8 @@ export default function AttendancePage() {
 
   function daysPresent(empId: string): number {
     let count = 0;
-    for (let d = 1; d <= dayCount; d++) {
-      const c = cells[key(empId, `${month}-${String(d).padStart(2, "0")}`)];
+    for (const ds of tbkDates) {
+      const c = cells[key(empId, ds)];
       if (c?.status) count += dayValue(c.status);
     }
     return count;
@@ -309,8 +315,8 @@ export default function AttendancePage() {
 
   function totalOt(empId: string): number {
     let ot = 0;
-    for (let d = 1; d <= dayCount; d++) {
-      const c = cells[key(empId, `${month}-${String(d).padStart(2, "0")}`)];
+    for (const ds of tbkDates) {
+      const c = cells[key(empId, ds)];
       ot += c?.otHours || 0;
     }
     return Math.round(ot * 100) / 100;
@@ -462,13 +468,17 @@ export default function AttendancePage() {
           </div>
         ) : (
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Month</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500">Month (26th to 25th)</label>
             <input
               type="month"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
             />
+            <p className="mt-1 text-xs text-slate-400">
+              {new Date(getTbkStartDate(month)).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} to{' '}
+              {new Date(getTbkEndDate(month)).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </p>
           </div>
         )}
         {!isEmployee && isAdmin && (
@@ -536,9 +546,9 @@ export default function AttendancePage() {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
                 <th className="sticky left-0 z-10 bg-slate-50 px-4 py-3">Employee</th>
-                {dayLabels.map((d) => (
-                  <th key={d} className="px-1 py-3 text-center text-xs">
-                    {d}
+                {tbkDates.map((ds) => (
+                  <th key={ds} className="px-1 py-3 text-center text-xs" title={ds}>
+                    {new Date(ds).getDate()}
                   </th>
                 ))}
                 <th className="px-2 py-3 text-center text-xs font-semibold text-slate-700">Days Present</th>
@@ -559,11 +569,10 @@ export default function AttendancePage() {
                       <br />
                       {e.name}
                     </td>
-                    {dayLabels.map((d) => {
-                      const ds = `${month}-${String(d).padStart(2, "0")}`;
+                    {tbkDates.map((ds) => {
                       const c = cells[key(e.id, ds)] || { status: "", otHours: 0 };
                       return (
-                        <td key={d} className="px-0.5 py-1 text-center align-top">
+                        <td key={ds} className="px-0.5 py-1 text-center align-top">
                           <button
                             onClick={() => openPopup(e.id, e.name, ds)}
                             className={`h-7 w-14 rounded text-xs font-medium ${c.status ? STATUS_COLORS[c.status] : "bg-slate-100 text-slate-500"}`}
@@ -593,11 +602,10 @@ export default function AttendancePage() {
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="sticky left-0 z-10 bg-white px-4 py-1" />
-                    {dayLabels.map((d) => {
-                      const ds = `${month}-${String(d).padStart(2, "0")}`;
+                    {tbkDates.map((ds) => {
                       const c = cells[key(e.id, ds)] || { status: "", otHours: 0 };
                       return (
-                        <td key={d} className="px-1 py-1 text-center">
+                        <td key={ds} className="px-1 py-1 text-center">
                           {c.otHours > 0 ? (
                             <span className="text-xs font-bold text-blue-600">{c.otHours}</span>
                           ) : (

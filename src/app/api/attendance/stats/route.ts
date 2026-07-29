@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { authorize, supervisorClientIds, getSelfEmployeeId, isArnavClient } from "@/lib/authorize";
+import { getTbkStartDate, getTbkEndDate, getCurrentTbkMonth } from "@/lib/tbkMonth";
 
 const PRESENT = new Set(["P", "P/2", "P-2"]);
 const ABSENT = new Set(["A"]);
@@ -52,10 +53,12 @@ export async function GET(request: Request) {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    const monthPrefix = (month || today.slice(0, 7)) + "-";
+    const activeMonth = month || getCurrentTbkMonth();
+    const tbkStart = getTbkStartDate(activeMonth);
+    const tbkEnd = getTbkEndDate(activeMonth);
 
     const todayWhere: any = { clientId, date: today };
-    const monthWhere: any = { clientId, date: { startsWith: monthPrefix } };
+    const monthWhere: any = { clientId, date: { gte: tbkStart, lte: tbkEnd } };
     if (employeeFilter) {
       todayWhere.employeeId = employeeFilter;
       monthWhere.employeeId = employeeFilter;

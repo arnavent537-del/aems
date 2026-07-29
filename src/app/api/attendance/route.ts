@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { authorize, supervisorClientIds, getSelfEmployeeId, isArnavClient } from "@/lib/authorize";
+import { getTbkStartDate, getTbkEndDate } from "@/lib/tbkMonth";
 
 // GET: Fetch attendance records for a client and date/month
 export async function GET(request: Request) {
@@ -69,9 +70,12 @@ export async function GET(request: Request) {
     if (date) {
       whereClause.date = date;
     } else if (month) {
-      // Find records starting with YYYY-MM
+      // Find records in TBK month date range (26th to 25th)
+      const tbkStart = getTbkStartDate(month);
+      const tbkEnd = getTbkEndDate(month);
       whereClause.date = {
-        startsWith: month,
+        gte: tbkStart,
+        lte: tbkEnd,
       };
     } else {
       return NextResponse.json({ error: "date or month parameter is required" }, { status: 400 });
