@@ -57,6 +57,9 @@ export async function POST(request: Request) {
     const currentTime = outTime || now.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false });
     const currentLocation = outLocation || null;
 
+    // Supervisors (like Sandip Patole) use location-only punching — no outTime / workHours
+    const isSupervisorPunch = employee.name === "Sandip Patole";
+
     // Find attendance record for today
     const record = await prisma.attendance.findUnique({
       where: { employeeId_date: { employeeId, date } },
@@ -69,14 +72,14 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!record.inTime) {
+    if (!isSupervisorPunch && !record.inTime) {
       return NextResponse.json(
         { error: "Please check in first before checking out." },
         { status: 400 }
       );
     }
 
-    if (record.outTime) {
+    if (!isSupervisorPunch && record.outTime) {
       return NextResponse.json(
         { error: "Already checked out for today", outTime: record.outTime },
         { status: 409 }
@@ -89,17 +92,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No admin user found in the system" }, { status: 500 });
     }
 
-    // Calculate work hours
-    const workHours = calculateWorkHours(record.inTime, currentTime);
+    // Calculate work hours (skip for supervisors — location-only punch)
+    const workHours = isSupervisorPunch ? null : calculateWorkHours(record.inTime!, currentTime);
 
     // Update record with check-out
     const updated = await prisma.attendance.update({
       where: { id: record.id },
       data: {
         status: "P",
-        outTime: currentTime,
+        ...(isSupervisorPunch ? {} : { outTime: currentTime }),
         outLocation: currentLocation,
-        workHours: workHours,
+        ...(isSupervisorPunch ? {} : { workHours }),
         createdBy: systemUser.id,
       },
       include: { employee: { select: { name: true } } },
