@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AEMS</string>
+    <string name="title_activity_main">AEMS</string>
+    <string name="package_name">com.arnaventerprises.aems</string>
+    <string name="custom_url_scheme">com.arnaventerprises.aems</string>
+</resources>
