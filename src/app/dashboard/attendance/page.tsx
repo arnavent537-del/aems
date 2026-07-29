@@ -9,8 +9,8 @@ import {
   getTbkStartDate,
   getTbkEndDate,
   getTbkDates,
-  getTbkDaysInMonth,
   getCurrentTbkMonth,
+  isTbkClient,
 } from "@/lib/tbkMonth";
 
 const STATUSES = ["P", "A", "P/2", "W-O", "PH"];
@@ -41,7 +41,7 @@ export default function AttendancePage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [tab, setTab] = useState<"daily" | "monthly">("daily");
   const [date, setDate] = useState(todayStr());
-  const [month, setMonth] = useState(getCurrentTbkMonth());
+  const [month, setMonth] = useState(todayStr().slice(0, 7));
   const [cells, setCells] = useState<Record<string, Cell>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -172,7 +172,7 @@ export default function AttendancePage() {
         const tbkStart = getTbkStartDate(month);
         const tbkEnd = getTbkEndDate(month);
         for (const a of advs) {
-          if (a.date < tbkStart || a.date > tbkEnd) continue;
+          if (isTbk ? (a.date < tbkStart || a.date > tbkEnd) : !a.date.startsWith(month)) continue;
           const signed = a.type === "recovery" ? -Math.abs(a.amount) : Math.abs(a.amount);
           byEmp[a.employeeId] = (byEmp[a.employeeId] || 0) + signed;
         }
@@ -269,9 +269,8 @@ export default function AttendancePage() {
           if (c?.status) pushCell(e.id, date, c);
         }
       } else {
-        const dates = getTbkDates(month);
         for (const e of employees) {
-          for (const ds of dates) {
+          for (const ds of displayDates) {
             const c = cells[key(e.id, ds)];
             if (c?.status) pushCell(e.id, ds, c);
           }
@@ -293,9 +292,14 @@ export default function AttendancePage() {
     window.location.href = `/api/attendance/export?${qs.toString()}`;
   }
 
-  const tbkDates = getTbkDates(month);
-  const dayCount = getTbkDaysInMonth(month);
-  const dayLabels = Array.from({ length: dayCount }, (_, i) => i + 1);
+  const currentClientName = clients.find(c => c.id === clientId)?.name || "";
+  const isTbk = isTbkClient(currentClientName);
+  const displayDates = isTbk ? getTbkDates(month) : (() => {
+    const [y, m] = month.split("-").map(Number);
+    const total = new Date(y, m, 0).getDate();
+    return Array.from({ length: total }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
+  })();
+  const dayCount = displayDates.length;
 
   function dayValue(status: string): number {
     if (status === "PH") return 1;
@@ -306,7 +310,7 @@ export default function AttendancePage() {
 
   function daysPresent(empId: string): number {
     let count = 0;
-    for (const ds of tbkDates) {
+    for (const ds of displayDates) {
       const c = cells[key(empId, ds)];
       if (c?.status) count += dayValue(c.status);
     }
@@ -315,7 +319,7 @@ export default function AttendancePage() {
 
   function totalOt(empId: string): number {
     let ot = 0;
-    for (const ds of tbkDates) {
+    for (const ds of displayDates) {
       const c = cells[key(empId, ds)];
       ot += c?.otHours || 0;
     }
@@ -468,17 +472,19 @@ export default function AttendancePage() {
           </div>
         ) : (
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Month (26th to 25th)</label>
+            <label className="mb-1 block text-xs font-medium text-slate-500">{isTbk ? "Month (26th to 25th)" : "Month"}</label>
             <input
               type="month"
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
               value={month}
               onChange={(e) => setMonth(e.target.value)}
             />
-            <p className="mt-1 text-xs text-slate-400">
-              {new Date(getTbkStartDate(month)).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} to{' '}
-              {new Date(getTbkEndDate(month)).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </p>
+            {isTbk && (
+              <p className="mt-1 text-xs text-slate-400">
+                {new Date(getTbkStartDate(month)).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })} to{' '}
+                {new Date(getTbkEndDate(month)).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </p>
+            )}
           </div>
         )}
         {!isEmployee && isAdmin && (
@@ -546,7 +552,7 @@ export default function AttendancePage() {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
                 <th className="sticky left-0 z-10 bg-slate-50 px-4 py-3">Employee</th>
-                {tbkDates.map((ds) => (
+                {displayDates.map((ds) => (
                   <th key={ds} className="px-1 py-3 text-center text-xs" title={ds}>
                     {new Date(ds).getDate()}
                   </th>
@@ -569,7 +575,7 @@ export default function AttendancePage() {
                       <br />
                       {e.name}
                     </td>
-                    {tbkDates.map((ds) => {
+                    {displayDates.map((ds) => {
                       const c = cells[key(e.id, ds)] || { status: "", otHours: 0 };
                       return (
                         <td key={ds} className="px-0.5 py-1 text-center align-top">
@@ -602,7 +608,7 @@ export default function AttendancePage() {
                   </tr>
                   <tr className="border-b border-slate-100">
                     <td className="sticky left-0 z-10 bg-white px-4 py-1" />
-                    {tbkDates.map((ds) => {
+                    {displayDates.map((ds) => {
                       const c = cells[key(e.id, ds)] || { status: "", otHours: 0 };
                       return (
                         <td key={ds} className="px-1 py-1 text-center">

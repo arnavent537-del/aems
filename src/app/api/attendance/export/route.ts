@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 import { prisma } from "@/lib/db";
 import { authorize, supervisorClientIds } from "@/lib/authorize";
-import { getTbkStartDate, getTbkEndDate, getTbkDates } from "@/lib/tbkMonth";
+import { getTbkStartDate, getTbkEndDate, getTbkDates, isTbkClient } from "@/lib/tbkMonth";
 
 const PRESENT = new Set(["P", "P/2", "P-2"]);
 
@@ -40,17 +40,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    const tbkStart = getTbkStartDate(month);
-    const tbkEnd = getTbkEndDate(month);
-    const tbkDates = getTbkDates(month);
-    const dayCount = tbkDates.length;
+    const useTbk = isTbkClient(client.name);
+    const dates = useTbk ? getTbkDates(month) : (() => {
+      const [y, m] = month.split("-").map(Number);
+      const total = new Date(y, m, 0).getDate();
+      return Array.from({ length: total }, (_, i) => `${month}-${String(i + 1).padStart(2, "0")}`);
+    })();
+    const dayCount = dates.length;
 
     const employees = await prisma.employee.findMany({
       where: { clientId, dateOfExit: null },
       orderBy: { employeeCode: "asc" },
     });
+    const dateFilter = useTbk
+      ? { gte: getTbkStartDate(month), lte: getTbkEndDate(month) }
+      : { startsWith: month };
     const recs = await prisma.attendance.findMany({
-      where: { clientId, date: { gte: tbkStart, lte: tbkEnd } },
+      where: { clientId, date: dateFilter },
     });
 
     const map = new Map<string, { status: string; otHours: number; workHours: number | null }>();
@@ -70,7 +76,7 @@ export async function GET(request: Request) {
       let present = 0;
       let ot = 0;
       const row: (string | number)[] = [e.employeeCode, e.name];
-      for (const ds of tbkDates) {
+      for (const ds of dates) {
         const rec = map.get(`${e.id}__${ds}`);
         const st = rec ? rec.status : "";
         row.push(st);

@@ -82,6 +82,11 @@ export function getTbkDateRange(tbkMonth: string): { start: string; end: string 
   };
 }
 
+// Check if a client name is the TBK company (26-25 cycle applies)
+export function isTbkClient(clientName: string): boolean {
+  return clientName.toLowerCase().includes("tbk");
+}
+
 // Get all dates as YYYY-MM format strings that fall within the TBK month
 export function getTbkMonthPrefixes(tbkMonth: string): string[] {
   const start = getTbkStartDate(tbkMonth);

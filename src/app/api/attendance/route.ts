@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { authorize, supervisorClientIds, getSelfEmployeeId, isArnavClient } from "@/lib/authorize";
-import { getTbkStartDate, getTbkEndDate } from "@/lib/tbkMonth";
+import { getTbkStartDate, getTbkEndDate, isTbkClient } from "@/lib/tbkMonth";
 
 // GET: Fetch attendance records for a client and date/month
 export async function GET(request: Request) {
@@ -70,13 +70,18 @@ export async function GET(request: Request) {
     if (date) {
       whereClause.date = date;
     } else if (month) {
-      // Find records in TBK month date range (26th to 25th)
-      const tbkStart = getTbkStartDate(month);
-      const tbkEnd = getTbkEndDate(month);
-      whereClause.date = {
-        gte: tbkStart,
-        lte: tbkEnd,
-      };
+      // Check if this client uses TBK 26-25 cycle
+      const queryClientId = typeof whereClause.clientId === "string" ? whereClause.clientId : clientId;
+      let useTbk = false;
+      if (queryClientId) {
+        const cli = await prisma.client.findUnique({ where: { id: queryClientId }, select: { name: true } });
+        useTbk = cli ? isTbkClient(cli.name) : false;
+      }
+      if (useTbk) {
+        whereClause.date = { gte: getTbkStartDate(month), lte: getTbkEndDate(month) };
+      } else {
+        whereClause.date = { startsWith: month };
+      }
     } else {
       return NextResponse.json({ error: "date or month parameter is required" }, { status: 400 });
     }

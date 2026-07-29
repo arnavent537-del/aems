@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { authorize, supervisorClientIds, getSelfEmployeeId, isArnavClient } from "@/lib/authorize";
-import { getTbkStartDate, getTbkEndDate, getCurrentTbkMonth } from "@/lib/tbkMonth";
+import { getTbkStartDate, getTbkEndDate, getCurrentTbkMonth, isTbkClient } from "@/lib/tbkMonth";
 
 const PRESENT = new Set(["P", "P/2", "P-2"]);
 const ABSENT = new Set(["A"]);
@@ -53,12 +53,18 @@ export async function GET(request: Request) {
     }
 
     const today = new Date().toISOString().slice(0, 10);
-    const activeMonth = month || getCurrentTbkMonth();
-    const tbkStart = getTbkStartDate(activeMonth);
-    const tbkEnd = getTbkEndDate(activeMonth);
+
+    // Check if this client uses TBK 26-25 cycle
+    const cli = await prisma.client.findUnique({ where: { id: clientId }, select: { name: true } });
+    const useTbk = cli ? isTbkClient(cli.name) : false;
+
+    const activeMonth = month || (useTbk ? getCurrentTbkMonth() : today.slice(0, 7));
+    const monthDateFilter = useTbk
+      ? { gte: getTbkStartDate(activeMonth), lte: getTbkEndDate(activeMonth) }
+      : { startsWith: activeMonth };
 
     const todayWhere: any = { clientId, date: today };
-    const monthWhere: any = { clientId, date: { gte: tbkStart, lte: tbkEnd } };
+    const monthWhere: any = { clientId, date: monthDateFilter };
     if (employeeFilter) {
       todayWhere.employeeId = employeeFilter;
       monthWhere.employeeId = employeeFilter;

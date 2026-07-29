@@ -6,13 +6,7 @@ import { api } from "@/lib/api";
 import { Card, Badge } from "@/components/ui";
 import type { Client, Employee, SalaryRecord, ComplianceRecord, SessionUser, ClientAdvanceSummary } from "@/lib/types";
 import { Building2, Users, Receipt, ShieldAlert, Wallet, UserMinus, UserPlus, HandCoins, Smartphone, MapPin, LogIn, LogOut, Clock, CalendarDays } from "lucide-react";
-import { getCurrentTbkMonth } from "@/lib/tbkMonth";
-
 function currentMonth(): string {
-  return getCurrentTbkMonth();
-}
-
-function calendarMonth(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -38,7 +32,6 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const month = currentMonth();
-  const salaryMonth = calendarMonth();
 
   useEffect(() => {
     api
@@ -90,8 +83,8 @@ export default function DashboardPage() {
           setAllEmployees(all);
         }
 
-        const salaryPromises = cl.map((c) => api.listSalaries(c.id, salaryMonth).catch(() => []));
-        const compPromises = cl.map((c) => api.listCompliance({ clientId: c.id, month: salaryMonth }).catch(() => []));
+        const salaryPromises = cl.map((c) => api.listSalaries(c.id, month).catch(() => []));
+        const compPromises = cl.map((c) => api.listCompliance({ clientId: c.id, month }).catch(() => []));
         const [sal, comp] = await Promise.all([Promise.all(salaryPromises), Promise.all(compPromises)]);
         setSalaries(sal.flat());
         setCompliance(comp.flat());
