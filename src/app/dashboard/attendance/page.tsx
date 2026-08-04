@@ -9,9 +9,9 @@ import {
   getTbkStartDate,
   getTbkEndDate,
   getTbkDates,
-  getCurrentTbkMonth,
   isTbkClient,
 } from "@/lib/tbkMonth";
+import { getAttendancePeriod, wasEmployedDuringPeriod } from "@/lib/attendancePeriod";
 
 const STATUSES = ["P", "A", "P/2", "W-O", "PH"];
 const PRESENT = new Set(["P", "P/2", "P-2"]);
@@ -60,6 +60,8 @@ export default function AttendancePage() {
   const showSalary = role === "admin" || role === "accountant";
   const canEditOt = role === "admin" || role === "accountant" || role === "supervisor";
   const maxDate = todayStr();
+  const currentClientName = clients.find(c => c.id === clientId)?.name || "";
+  const isTbk = isTbkClient(currentClientName);
   // Check if viewing Arnav as non-admin staff (read-only view)
   const isArnavRestrictedView = role !== "admin" && role !== "employee" && employeeId !== null &&
     clients.find(c => c.id === clientId)?.name === "Arnav Enterprises";
@@ -103,11 +105,19 @@ export default function AttendancePage() {
   useEffect(() => {
     if (!clientId || isEmployee) return;
     setLoading(true);
+    const period = getAttendancePeriod(month, isTbk);
+    const includeExited = tab === "monthly";
     api
-      .listEmployees({ clientId })
-      .then(setEmployees)
+      .listEmployees({ clientId, includeExited })
+      .then((employeeList) => {
+        setEmployees(
+          tab === "monthly"
+            ? employeeList.filter((employee) => wasEmployedDuringPeriod(employee, period))
+            : employeeList
+        );
+      })
       .finally(() => setLoading(false));
-  }, [clientId, isEmployee]);
+  }, [clientId, isEmployee, tab, month, isTbk]);
 
   function loadAttendance() {
     if (!clientId) return;
@@ -292,8 +302,6 @@ export default function AttendancePage() {
     window.location.href = `/api/attendance/export?${qs.toString()}`;
   }
 
-  const currentClientName = clients.find(c => c.id === clientId)?.name || "";
-  const isTbk = isTbkClient(currentClientName);
   const displayDates = isTbk ? getTbkDates(month) : (() => {
     const [y, m] = month.split("-").map(Number);
     const total = new Date(y, m, 0).getDate();
@@ -517,7 +525,9 @@ export default function AttendancePage() {
         {loading ? (
           <p className="px-4 py-6 text-center text-slate-400">Loading...</p>
         ) : filteredEmployees.length === 0 ? (
-          <p className="px-4 py-6 text-center text-slate-400">No active employees for this client.</p>
+          <p className="px-4 py-6 text-center text-slate-400">
+            {tab === "monthly" ? "No employees were active during this attendance period." : "No active employees for this client."}
+          </p>
         ) : tab === "daily" ? (
           <table className="w-full text-sm">
             <thead>

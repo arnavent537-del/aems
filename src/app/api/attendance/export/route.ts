@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { prisma } from "@/lib/db";
 import { authorize, supervisorClientIds } from "@/lib/authorize";
 import { getTbkStartDate, getTbkEndDate, getTbkDates, isTbkClient } from "@/lib/tbkMonth";
+import { getAttendancePeriod, wasEmployedDuringPeriod } from "@/lib/attendancePeriod";
 
 const PRESENT = new Set(["P", "P/2", "P-2"]);
 
@@ -48,10 +49,13 @@ export async function GET(request: Request) {
     })();
     const dayCount = dates.length;
 
-    const employees = await prisma.employee.findMany({
-      where: { clientId, dateOfExit: null },
+    const allEmployees = await prisma.employee.findMany({
+      where: { clientId },
       orderBy: { employeeCode: "asc" },
     });
+    const employees = allEmployees.filter((employee) =>
+      wasEmployedDuringPeriod(employee, getAttendancePeriod(month, useTbk))
+    );
     const dateFilter = useTbk
       ? { gte: getTbkStartDate(month), lte: getTbkEndDate(month) }
       : { startsWith: month };
