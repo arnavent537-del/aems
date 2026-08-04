@@ -71,7 +71,8 @@
       "Read(//var/**)",
       "Bash(ls /root/*/)",
       "Bash(ls /var/)",
-      "Read(//c//**)"
+      "Read(//c//**)",
+      "Bash(npx tsx -e ' *)"
     ]
   }
 }

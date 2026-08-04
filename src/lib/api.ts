@@ -175,6 +175,18 @@ export const api = {
     return parse<{ created: number; codes: string[]; errors: string[] }>(res);
   },
 
+  async bulkAdvances(clientId: string, file: File): Promise<{ created: number; codes: string[]; errors: string[] }> {
+    const form = new FormData();
+    form.append("clientId", clientId);
+    form.append("file", file);
+    const res = await fetch("/api/advances/bulk", {
+      method: "POST",
+      body: form,
+      credentials: "include",
+    });
+    return parse<{ created: number; codes: string[]; errors: string[] }>(res);
+  },
+
   async getEmployeeLocations(employeeId: string): Promise<EmployeeLocation[]> {
     const res = await fetch(`/api/employees/${employeeId}/locations`, { credentials: "include" });
     return parse<EmployeeLocation[]>(res);

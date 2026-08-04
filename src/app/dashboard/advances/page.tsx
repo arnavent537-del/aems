@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { Card, Badge, Button, Modal, Field, inputClass, Toast } from "@/components/ui";
 import type { Client, Employee, AdvanceRecord, ClientAdvanceSummary } from "@/lib/types";
-import { Plus, Trash2, Download, BarChart3, CheckCircle, XCircle, Ban, Clock } from "lucide-react";
+import { Plus, Trash2, Download, Upload, BarChart3, CheckCircle, XCircle, Ban, Clock } from "lucide-react";
 
 const STATUS_COLORS: Record<string, "amber" | "blue" | "green" | "slate" | "red"> = {
   pending: "amber",
@@ -41,6 +41,10 @@ export default function AdvancesPage() {
   const [form, setForm] = useState<any>({ type: "given", amount: "", date: new Date().toISOString().slice(0, 10), remarks: "" });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "error" | "success" }>({ msg: "", type: "error" });
+
+  const [importOpen, setImportOpen] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
 
   const loadClients = useCallback(async () => {
     const cl = await api.listClients();
@@ -170,6 +174,26 @@ export default function AdvancesPage() {
     window.location.href = `/api/advances/export?${qs.toString()}`;
   }
 
+  async function handleImport() {
+    if (!importFile) {
+      setToast({ msg: "Choose an Excel/CSV file first", type: "error" });
+      return;
+    }
+    setImporting(true);
+    try {
+      const res = await api.bulkAdvances(clientId, importFile);
+      const errPart = res.errors && res.errors.length ? ` (${res.errors.length} skipped)` : "";
+      setToast({ msg: `Imported ${res.created} advance record(s)${errPart}`, type: "success" });
+      setImportOpen(false);
+      setImportFile(null);
+      await loadLedger();
+    } catch (e: any) {
+      setToast({ msg: e.message || "Import failed", type: "error" });
+    } finally {
+      setImporting(false);
+    }
+  }
+
   const colCount = canEdit && !isArnavRestrictedView ? 9 : 8;
 
   return (
@@ -183,9 +207,16 @@ export default function AdvancesPage() {
         </div>
         <div className="flex gap-2">
           {!isEmployee && (
-            <Button variant="secondary" onClick={exportExcel}>
-              <Download className="h-4 w-4" /> Export
-            </Button>
+            <>
+              <Button variant="secondary" onClick={exportExcel}>
+                <Download className="h-4 w-4" /> Export
+              </Button>
+              {canEdit && !isArnavRestrictedView && (
+                <Button variant="secondary" onClick={() => setImportOpen(true)}>
+                  <Upload className="h-4 w-4" /> Import
+                </Button>
+              )}
+            </>
           )}
           {isArnavRestrictedView ? (
             <span className="rounded-lg bg-blue-50 px-3 py-2 text-sm text-blue-700">
@@ -402,6 +433,45 @@ export default function AdvancesPage() {
               <p className="text-xs text-slate-500">Your request will be sent to your supervisor for approval.</p>
             </div>
           )}
+        </div>
+      </Modal>
+
+      <Modal
+        open={importOpen}
+        title="Bulk Import Advances"
+        onClose={() => setImportOpen(false)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setImportOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleImport} disabled={importing}>
+              {importing ? "Importing..." : "Upload & Import"}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">
+            Upload an <span className="font-medium">.xlsx</span> or <span className="font-medium">.csv</span> file with columns:
+            <span className="mt-1 block font-mono text-xs text-slate-600">
+              Date, Employee Code, Type, Amount, Remarks
+            </span>
+          </p>
+          <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700">
+            <strong>Required:</strong> Date, Employee Code (or Employee Name), Amount
+            <br />
+            <strong>Type:</strong> <span className="font-medium">given</span> (advance, default) or <span className="font-medium">recovery</span>
+            <br />
+            <strong>Note:</strong> Imported records are marked as <span className="font-medium">paid</span> for the selected client:{" "}
+            <span className="font-semibold">{clients.find((c) => c.id === clientId)?.name || ""}</span>
+          </div>
+          <input
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+            className="block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-indigo-700 hover:file:bg-indigo-100"
+          />
         </div>
       </Modal>
 
