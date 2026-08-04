@@ -54,7 +54,7 @@ async function main() {
   const employeeRecords = {};
   for (let i = 0; i < employeeData.length; i++) {
     const e = employeeData[i];
-    const empCode = `AE${String(i + 1).padStart(4, '0')}`;
+    const empCode = `AE${String(i + 1).padStart(3, '0')}`;
     const employee = await prisma.employee.upsert({
       where: { employeeCode: empCode },
       update: { name: e.name, phoneNo: e.phoneNo, gender: e.gender, salaryRate: e.salaryRate },

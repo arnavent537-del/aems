@@ -9,7 +9,7 @@ const CLIENT_CODE_MAP: Record<string, number> = {
   "inled": 40001,
   "tbk": 50001,
   "arun": 60001,
-  "arnav": 1,  // Will start from 00001
+  "arnav": 1,  // Arnav uses AE-prefixed codes (AE001, AE002, ...)
 };
 
 function findBaseCode(clientName: string): number | null {
@@ -56,6 +56,21 @@ export async function generateEmployeeCode(clientId: string): Promise<string> {
     orderBy: { employeeCode: "desc" },
   });
 
+  // Arnav Enterprises uses AE-prefixed codes (AE001, AE002, ...)
+  if (baseCode === 1) {
+    let nextSequence = 1;
+    for (const emp of employees) {
+      const match = emp.employeeCode.match(/^AE0*(\d+)$/i);
+      if (match) {
+        const sequence = parseInt(match[1], 10);
+        if (sequence >= nextSequence) {
+          nextSequence = sequence + 1;
+        }
+      }
+    }
+    return `AE${String(nextSequence).padStart(3, "0")}`;
+  }
+
   let nextSequence = 1;
 
   if (employees.length > 0) {
@@ -63,15 +78,7 @@ export async function generateEmployeeCode(clientId: string): Promise<string> {
     for (const emp of employees) {
       const empNum = parseInt(emp.employeeCode, 10);
       if (!isNaN(empNum)) {
-        // For Arnav Enterprises (baseCode = 1)
-        if (baseCode === 1 && empNum >= 1 && empNum < 10000) {
-          const sequence = empNum - baseCode + 1;
-          if (sequence >= nextSequence) {
-            nextSequence = sequence + 1;
-          }
-        }
-        // For other clients (baseCode = 10001, 20001, etc.)
-        else if (empNum >= baseCode && empNum < baseCode + 10000) {
+        if (empNum >= baseCode && empNum < baseCode + 10000) {
           const sequence = empNum - baseCode + 1;
           if (sequence >= nextSequence) {
             nextSequence = sequence + 1;

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
 import { Card, Badge, Button, Modal, Field, inputClass, Toast } from "@/components/ui";
 import type { Client, Employee, AdvanceRecord, ClientAdvanceSummary } from "@/lib/types";
-import { Plus, Trash2, Download, Upload, BarChart3, CheckCircle, XCircle, Ban, Clock } from "lucide-react";
+import { Plus, Trash2, Download, Upload, BarChart3, CheckCircle, XCircle, Ban, Clock, Search } from "lucide-react";
 
 const STATUS_COLORS: Record<string, "amber" | "blue" | "green" | "slate" | "red"> = {
   pending: "amber",
@@ -16,11 +16,65 @@ const STATUS_COLORS: Record<string, "amber" | "blue" | "green" | "slate" | "red"
 
 const STATUSES = ["", "pending", "approved", "paid", "hold", "rejected"];
 
+function EmployeeSearchSelect({ employees, value, onChange }: { employees: Employee[]; value: string; onChange: (id: string) => void }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const sel = employees.find((e) => e.id === value);
+    setQuery(sel ? `${sel.employeeCode} — ${sel.name}` : "");
+  }, [value, employees]);
+
+  const matches = employees.filter(
+    (e) =>
+      !query.trim() ||
+      e.name.toLowerCase().includes(query.toLowerCase()) ||
+      e.employeeCode.toLowerCase().includes(query.toLowerCase())
+  );
+
+  return (
+    <div className="relative">
+      <div className="flex items-center rounded-lg border border-slate-300 px-3">
+        <Search className="h-4 w-4 shrink-0 text-slate-400" />
+        <input
+          value={query}
+          onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 150)}
+          placeholder="Search name or code"
+          className="w-full bg-transparent px-2 py-2 text-sm outline-none"
+        />
+      </div>
+      {open && matches.length > 0 && (
+        <ul className="absolute z-10 mt-1 max-h-52 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-lg">
+          {matches.map((e) => (
+            <li key={e.id}>
+              <button
+                type="button"
+                className="w-full px-3 py-2 text-left text-sm hover:bg-indigo-50"
+                onMouseDown={(ev) => {
+                  ev.preventDefault();
+                  onChange(e.id);
+                  setQuery(`${e.employeeCode} — ${e.name}`);
+                  setOpen(false);
+                }}
+              >
+                <span className="font-medium text-slate-800">{e.employeeCode}</span>
+                <span className="ml-2 text-slate-500">{e.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function AdvancesPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [clientId, setClientId] = useState<string>("");
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [employeeId, setEmployeeId] = useState<string>("");
+  const [employeeSearch, setEmployeeSearch] = useState("");
   const [ledger, setLedger] = useState<AdvanceRecord[]>([]);
   const [summary, setSummary] = useState<ClientAdvanceSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -81,18 +135,14 @@ export default function AdvancesPage() {
     if (!clientId && !isEmployee) return;
     setLoading(true);
     try {
-      const params: any = isEmployee
-        ? { employeeId: myEmployeeId }
-        : employeeId
-          ? { employeeId, clientId }
-          : { clientId };
+      const params: any = isEmployee ? { employeeId: myEmployeeId } : { clientId };
       if (statusFilter) params.status = statusFilter;
       const data = await api.listAdvances(params);
       setLedger(data);
     } finally {
       setLoading(false);
     }
-  }, [clientId, employeeId, isEmployee, myEmployeeId, statusFilter]);
+  }, [clientId, isEmployee, myEmployeeId, statusFilter]);
 
   useEffect(() => {
     loadLedger();
@@ -102,13 +152,23 @@ export default function AdvancesPage() {
     if (!isEmployee) api.advanceSummary().then(setSummary).catch(() => setSummary([]));
   }, [isEmployee]);
 
+  const filteredLedger = useMemo(() => {
+    const q = employeeSearch.trim().toLowerCase();
+    if (!q) return ledger;
+    return ledger.filter(
+      (a) =>
+        a.employee &&
+        (a.employee.name.toLowerCase().includes(q) || a.employee.employeeCode.toLowerCase().includes(q))
+    );
+  }, [ledger, employeeSearch]);
+
   function openAdd() {
     setForm({
       type: "given",
       amount: "",
       date: new Date().toISOString().slice(0, 10),
       remarks: "",
-      employeeId: employeeId || employees[0]?.id || "",
+      employeeId: employees[0]?.id || "",
     });
     setModalOpen(true);
   }
@@ -168,9 +228,7 @@ export default function AdvancesPage() {
   }
 
   function exportExcel() {
-    const qs = new URLSearchParams();
-    if (employeeId) qs.set("employeeId", employeeId);
-    else qs.set("clientId", clientId);
+    const qs = new URLSearchParams({ clientId });
     window.location.href = `/api/advances/export?${qs.toString()}`;
   }
 
@@ -234,20 +292,23 @@ export default function AdvancesPage() {
         <Card className="flex flex-wrap items-end gap-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Client</label>
-            <select className={inputClass} value={clientId} onChange={(e) => { setClientId(e.target.value); setEmployeeId(""); }}>
+            <select className={inputClass} value={clientId} onChange={(e) => setClientId(e.target.value)}>
               {clients.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-500">Employee (optional)</label>
-            <select className={inputClass} value={employeeId} onChange={(e) => setEmployeeId(e.target.value)}>
-              <option value="">All employees</option>
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>{e.employeeCode} — {e.name}</option>
-              ))}
-            </select>
+          <div className="min-w-[180px] flex-1">
+            <label className="mb-1 block text-xs font-medium text-slate-500">Search Employee</label>
+            <div className="flex items-center rounded-lg border border-slate-300 px-3">
+              <Search className="h-4 w-4 shrink-0 text-slate-400" />
+              <input
+                value={employeeSearch}
+                onChange={(e) => setEmployeeSearch(e.target.value)}
+                placeholder="Name or code"
+                className="w-full bg-transparent px-2 py-2 text-sm outline-none"
+              />
+            </div>
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-500">Status</label>
@@ -311,12 +372,14 @@ export default function AdvancesPage() {
                 <td colSpan={colCount} className="px-4 py-6 text-center text-slate-400">Loading...</td>
               </tr>
             )}
-            {!loading && ledger.length === 0 && (
+            {!loading && filteredLedger.length === 0 && (
               <tr>
-                <td colSpan={colCount} className="px-4 py-6 text-center text-slate-400">No advance records.</td>
+                <td colSpan={colCount} className="px-4 py-6 text-center text-slate-400">
+                  {ledger.length === 0 ? "No advance records." : "No employees match your search."}
+                </td>
               </tr>
             )}
-            {!loading && ledger.map((a) => (
+            {!loading && filteredLedger.map((a) => (
               <tr key={a.id} className="border-b border-slate-100 hover:bg-slate-50">
                 <td className="px-4 py-3 text-slate-600">{a.date}</td>
                 <td className="px-4 py-3 font-medium text-slate-800">
@@ -402,11 +465,11 @@ export default function AdvancesPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {!isEmployee && (
             <Field label="Employee">
-              <select className={inputClass} value={form.employeeId} onChange={(e) => setForm({ ...form, employeeId: e.target.value })}>
-                {employees.map((e) => (
-                  <option key={e.id} value={e.id}>{e.employeeCode} — {e.name}</option>
-                ))}
-              </select>
+              <EmployeeSearchSelect
+                employees={employees}
+                value={form.employeeId}
+                onChange={(id) => setForm({ ...form, employeeId: id })}
+              />
             </Field>
           )}
           {!isEmployee && (

@@ -72,7 +72,9 @@
       "Bash(ls /root/*/)",
       "Bash(ls /var/)",
       "Read(//c//**)",
-      "Bash(npx tsx -e ' *)"
+      "Bash(npx tsx -e ' *)",
+      "Bash(sqlite3 prisma/dev.db \"SELECT employeeCode, name, clientId FROM Employee WHERE employeeCode LIKE '%AE%' OR employeeCode GLOB '[0-9]*' LIMIT 30;\")",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\); console.log\\('dev dep next:', p.devDependencies?.next || p.dependencies?.next\\)\")"
     ]
   }
 }
