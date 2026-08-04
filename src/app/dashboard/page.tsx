@@ -78,10 +78,8 @@ export default function DashboardPage() {
         setClients(cl);
         setEmployees(emp);
 
-        if (currentUser.role === "supervisor") {
-          const all = await api.listEmployees({ includeExited: true });
-          setAllEmployees(all);
-        }
+        const all = await api.listEmployees({ includeExited: true });
+        setAllEmployees(all);
 
         const salaryPromises = cl.map((c) => api.listSalaries(c.id, month).catch(() => []));
         const compPromises = cl.map((c) => api.listCompliance({ clientId: c.id, month }).catch(() => []));
@@ -347,6 +345,42 @@ export default function DashboardPage() {
         </div>
       ) : (
         <>
+          <Card>
+            <div className="mb-4 flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-indigo-600" />
+              <h2 className="text-lg font-semibold text-slate-800">Employees by Client</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {clients.map((c) => {
+                const active = employees.filter((e) => e.clientId === c.id).length;
+                const left = allEmployees.filter((e) => e.clientId === c.id && e.dateOfExit).length;
+                const joinedThisMonth = allEmployees.filter(
+                  (e) => e.clientId === c.id && !e.dateOfExit && monthYearOf(e.dateOfJoining) === month
+                ).length;
+                return (
+                  <div key={c.id} className="rounded-2xl border border-slate-200 p-4">
+                    <p className="truncate text-sm font-semibold text-slate-800" title={c.name}>
+                      {c.name}
+                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-xl bg-emerald-50 p-3">
+                        <p className="text-xs text-emerald-700">Active</p>
+                        <p className="text-2xl font-bold text-emerald-600">{active}</p>
+                      </div>
+                      <div className="rounded-xl bg-rose-50 p-3">
+                        <p className="text-xs text-rose-700">Left</p>
+                        <p className="text-2xl font-bold text-rose-600">{left}</p>
+                      </div>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">
+                      {joinedThisMonth > 0 ? `${joinedThisMonth} joined this month` : "No new joinees this month"}
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
           <Card>
             <div className="mb-3 flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-amber-600" />
