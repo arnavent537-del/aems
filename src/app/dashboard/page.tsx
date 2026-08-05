@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import { Card, Badge } from "@/components/ui";
+import { complianceProgress } from "@/lib/compliance";
 import type { Client, Employee, SalaryRecord, ComplianceRecord, SessionUser, ClientAdvanceSummary } from "@/lib/types";
 import { Building2, Users, Receipt, ShieldAlert, Wallet, UserMinus, UserPlus, HandCoins, Smartphone, MapPin, LogIn, LogOut, Clock, CalendarDays } from "lucide-react";
 function currentMonth(): string {
@@ -112,9 +113,7 @@ export default function DashboardPage() {
   );
 
   const monthlySalary = salaries.reduce((sum, s) => sum + s.netPaid, 0);
-  const pendingCompliance = compliance.filter(
-    (c) => c.pfFilingStatus !== "Paid" || c.esicFilingStatus !== "Paid"
-  ).length;
+  const pendingCompliance = compliance.filter((c) => complianceProgress(c).done < complianceProgress(c).total).length;
 
   const supervisorStats = [
     { label: "Clients", value: clients.length, icon: Building2, color: "text-indigo-600 bg-indigo-50" },
@@ -391,39 +390,31 @@ export default function DashboardPage() {
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-500">
                     <th className="py-2 pr-4">Client</th>
-                    <th className="py-2 pr-4">PF</th>
-                    <th className="py-2 pr-4">ESIC</th>
-                    <th className="py-2">NAPS</th>
+                    <th className="py-2">Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {compliance.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-4 text-center text-slate-400">
+                      <td colSpan={2} className="py-4 text-center text-slate-400">
                         No compliance records for this month yet.
                       </td>
                     </tr>
                   )}
-                  {compliance.map((c) => (
-                    <tr key={c.id} className="border-b border-slate-100">
-                      <td className="py-2 pr-4 font-medium text-slate-700">{c.client?.name}</td>
-                      <td className="py-2 pr-4">
-                        <Badge color={c.pfFilingStatus === "Paid" ? "green" : c.pfFilingStatus === "Filed" ? "blue" : "amber"}>
-                          {c.pfFilingStatus}
-                        </Badge>
-                      </td>
-                      <td className="py-2 pr-4">
-                        <Badge color={c.esicFilingStatus === "Paid" ? "green" : c.esicFilingStatus === "Filed" ? "blue" : "amber"}>
-                          {c.esicFilingStatus}
-                        </Badge>
-                      </td>
-                      <td className="py-2">
-                        <Badge color={c.napsComplianceStatus === "Done" ? "green" : "amber"}>
-                          {c.napsComplianceStatus}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
+                  {compliance.map((c) => {
+                    const { done, total } = complianceProgress(c);
+                    const complete = done === total;
+                    return (
+                      <tr key={c.id} className="border-b border-slate-100">
+                        <td className="py-2 pr-4 font-medium text-slate-700">{c.client?.name}</td>
+                        <td className="py-2">
+                          <Badge color={complete ? "green" : "amber"}>
+                            {complete ? "Completed" : `${done}/${total}`}
+                          </Badge>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

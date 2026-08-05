@@ -124,11 +124,22 @@ export interface ComplianceRecord {
   id: string;
   month: string;
   clientId: string;
-  pfFilingStatus: string;
-  esicFilingStatus: string;
+  finalAttendanceStatus: string;
+  finalBillStatus: string;
+  advancesStatus: string;
+  salaryExcelSheetStatus: string;
+  salaryUploadToPortalStatus: string;
+  salaryDisburseStatus: string;
+  pfChallanEcrUploadStatus: string;
+  esicChallanEcrUploadStatus: string;
+  ptChallanUploadStatus: string;
+  gstChallanUploadStatus: string;
+  pfChallanPaidStatus: string;
+  esicChallanPaidStatus: string;
+  ptPaidStatus: string;
+  gstPaidStatus: string;
   pfChallanUrl: string | null;
   esicChallanUrl: string | null;
-  napsComplianceStatus: string;
   showCauseNoticesCount: number;
   client?: { name: string };
 }

@@ -74,10 +74,6 @@ export async function POST(request: Request) {
       data: {
         clientId,
         month,
-        pfFilingStatus: "Pending",
-        esicFilingStatus: "Pending",
-        napsComplianceStatus: "Pending",
-        showCauseNoticesCount: 0,
       },
     });
 

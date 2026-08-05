@@ -183,18 +183,29 @@ model Salary {
 }
 
 model Compliance {
-  id                     String   @id @default(uuid())
-  month                  String   // YYYY-MM
-  clientId               String
-  client                 Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  pfFilingStatus         String   // 'Pending', 'Filed', 'Paid'
-  esicFilingStatus       String   // 'Pending', 'Filed', 'Paid'
-  pfChallanUrl           String?
-  esicChallanUrl         String?
-  napsComplianceStatus   String   @default("Pending") // 'Pending', 'Done'
-  showCauseNoticesCount  Int      @default(0)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  id                         String   @id @default(uuid())
+  month                      String   // YYYY-MM
+  clientId                   String
+  client                     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  finalAttendanceStatus      String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  finalBillStatus            String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  advancesStatus             String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  salaryExcelSheetStatus     String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  salaryUploadToPortalStatus String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  salaryDisburseStatus       String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  pfChallanEcrUploadStatus   String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  esicChallanEcrUploadStatus String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  ptChallanUploadStatus      String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  gstChallanUploadStatus     String   @default("Pending") // 'Pending', 'In Process', 'Completed'
+  pfChallanPaidStatus        String   @default("Unpaid")  // 'Unpaid', 'Paid'
+  esicChallanPaidStatus      String   @default("Unpaid")  // 'Unpaid', 'Paid'
+  ptPaidStatus               String   @default("Unpaid")  // 'Unpaid', 'Paid'
+  gstPaidStatus              String   @default("Unpaid")  // 'Unpaid', 'Paid'
+  pfChallanUrl               String?
+  esicChallanUrl             String?
+  showCauseNoticesCount      Int      @default(0)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
 
   @@unique([clientId, month])
 }

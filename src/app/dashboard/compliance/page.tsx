@@ -4,9 +4,16 @@ import { useEffect, useState, useCallback } from "react";
 import { api } from "@/lib/api";
 import { Card, Badge, Button, Modal, Field, inputClass, Toast } from "@/components/ui";
 import type { Client, ComplianceRecord } from "@/lib/types";
+import { COMPLIANCE_FIELDS, defaultComplianceStatuses, statusColor } from "@/lib/compliance";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
-const STATUSES = ["Pending", "Filed", "Paid"];
+const GROUPS = ["Workflow", "Challan Upload", "Challan Paid"] as const;
+
+function groupSpan(group: string): number {
+  return COMPLIANCE_FIELDS.filter((f) => f.group === group).length;
+}
+
+const TOTAL_COLUMNS = 2 + COMPLIANCE_FIELDS.length + 1; // client + month + 14 statuses + actions
 
 function currentMonth(): string {
   return new Date().toISOString().slice(0, 7);
@@ -53,7 +60,7 @@ export default function CompliancePage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ clientId, month, pfFilingStatus: "Pending", esicFilingStatus: "Pending", napsComplianceStatus: "Pending" });
+    setForm({ clientId, month, ...defaultComplianceStatuses() });
     setModalOpen(true);
   }
 
@@ -98,7 +105,7 @@ export default function CompliancePage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Compliance</h1>
-          <p className="text-sm text-slate-500">Track PF / ESIC filing and NAPS compliance per client.</p>
+          <p className="text-sm text-slate-500">Track the monthly compliance workflow per client.</p>
         </div>
         {canEdit && (
           <Button onClick={openCreate}>
@@ -130,23 +137,35 @@ export default function CompliancePage() {
             <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
               <th className="px-4 py-3">Client</th>
               <th className="px-4 py-3">Month</th>
-              <th className="px-4 py-3">PF</th>
-              <th className="px-4 py-3">ESIC</th>
-              <th className="px-4 py-3">NAPS</th>
+              {GROUPS.map((g) => (
+                <th key={g} colSpan={groupSpan(g)} className="border-l border-slate-200 px-4 py-2 text-center text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  {g}
+                </th>
+              ))}
+              {canEdit && <th className="px-4 py-3 text-right">Actions</th>}
+            </tr>
+            <tr className="border-b border-slate-200 bg-slate-50 text-left text-slate-500">
+              <th className="px-4 py-3">Client</th>
+              <th className="px-4 py-3">Month</th>
+              {COMPLIANCE_FIELDS.map((f) => (
+                <th key={f.key} className="whitespace-nowrap border-l border-slate-200 px-4 py-3">
+                  {f.label}
+                </th>
+              ))}
               {canEdit && <th className="px-4 py-3 text-right">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={canEdit ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={canEdit ? TOTAL_COLUMNS : TOTAL_COLUMNS - 1} className="px-4 py-6 text-center text-slate-400">
                   Loading...
                 </td>
               </tr>
             )}
             {!loading && records.length === 0 && (
               <tr>
-                <td colSpan={canEdit ? 6 : 5} className="px-4 py-6 text-center text-slate-400">
+                <td colSpan={canEdit ? TOTAL_COLUMNS : TOTAL_COLUMNS - 1} className="px-4 py-6 text-center text-slate-400">
                   No compliance records for this month.
                 </td>
               </tr>
@@ -156,19 +175,11 @@ export default function CompliancePage() {
                 <tr key={c.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="px-4 py-3 font-medium text-slate-800">{c.client?.name}</td>
                   <td className="px-4 py-3 text-slate-600">{c.month}</td>
-                  <td className="px-4 py-3">
-                    <Badge color={c.pfFilingStatus === "Paid" ? "green" : c.pfFilingStatus === "Filed" ? "blue" : "amber"}>
-                      {c.pfFilingStatus}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge color={c.esicFilingStatus === "Paid" ? "green" : c.esicFilingStatus === "Filed" ? "blue" : "amber"}>
-                      {c.esicFilingStatus}
-                    </Badge>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge color={c.napsComplianceStatus === "Done" ? "green" : "amber"}>{c.napsComplianceStatus}</Badge>
-                  </td>
+                  {COMPLIANCE_FIELDS.map((f) => (
+                    <td key={f.key} className="whitespace-nowrap border-l border-slate-100 px-4 py-3">
+                      <Badge color={statusColor(c[f.key as keyof ComplianceRecord] as string)}>{c[f.key as keyof ComplianceRecord] as string}</Badge>
+                    </td>
+                  ))}
                   {canEdit && (
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-1">
@@ -202,9 +213,9 @@ export default function CompliancePage() {
           </>
         }
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-4">
           {!editing && (
-            <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Client">
                 <select className={inputClass} value={form.clientId} onChange={(e) => setForm({ ...form, clientId: e.target.value })}>
                   {clients.map((c) => (
@@ -217,38 +228,34 @@ export default function CompliancePage() {
               <Field label="Month">
                 <input type="month" className={inputClass} value={form.month} onChange={(e) => setForm({ ...form, month: e.target.value })} />
               </Field>
-            </>
+            </div>
           )}
-          <Field label="PF Filing Status">
-            <select className={inputClass} value={form.pfFilingStatus} onChange={(e) => setForm({ ...form, pfFilingStatus: e.target.value })}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="ESIC Filing Status">
-            <select className={inputClass} value={form.esicFilingStatus} onChange={(e) => setForm({ ...form, esicFilingStatus: e.target.value })}>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="PF Challan URL">
-            <input className={inputClass} value={form.pfChallanUrl || ""} onChange={(e) => setForm({ ...form, pfChallanUrl: e.target.value })} />
-          </Field>
-          <Field label="ESIC Challan URL">
-            <input className={inputClass} value={form.esicChallanUrl || ""} onChange={(e) => setForm({ ...form, esicChallanUrl: e.target.value })} />
-          </Field>
-          <Field label="NAPS Compliance">
-            <select className={inputClass} value={form.napsComplianceStatus} onChange={(e) => setForm({ ...form, napsComplianceStatus: e.target.value })}>
-              <option value="Pending">Pending</option>
-              <option value="Done">Done</option>
-            </select>
-          </Field>
+          {GROUPS.map((g) => (
+            <div key={g} className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-400">{g}</h4>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {COMPLIANCE_FIELDS.filter((f) => f.group === g).map((f) => (
+                  <Field key={f.key} label={f.label}>
+                    <select className={inputClass} value={form[f.key] || ""} onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}>
+                      {f.statuses.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                ))}
+              </div>
+            </div>
+          ))}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Field label="PF Challan URL">
+              <input className={inputClass} value={form.pfChallanUrl || ""} onChange={(e) => setForm({ ...form, pfChallanUrl: e.target.value })} />
+            </Field>
+            <Field label="ESIC Challan URL">
+              <input className={inputClass} value={form.esicChallanUrl || ""} onChange={(e) => setForm({ ...form, esicChallanUrl: e.target.value })} />
+            </Field>
+          </div>
         </div>
       </Modal>
 

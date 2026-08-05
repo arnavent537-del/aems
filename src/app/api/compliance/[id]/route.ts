@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { authorize } from "@/lib/authorize";
+import { COMPLIANCE_STATUS_KEYS, complianceProgress } from "@/lib/compliance";
 
 export async function PUT(
   request: Request,
@@ -20,14 +21,7 @@ export async function PUT(
     }
 
     const updateData: any = {};
-    const fields = [
-      "pfFilingStatus",
-      "esicFilingStatus",
-      "pfChallanUrl",
-      "esicChallanUrl",
-      "napsComplianceStatus",
-      "showCauseNoticesCount",
-    ];
+    const fields = [...COMPLIANCE_STATUS_KEYS, "pfChallanUrl", "esicChallanUrl", "showCauseNoticesCount"];
     for (const f of fields) {
       if (body[f] !== undefined) updateData[f] = body[f];
     }
@@ -37,11 +31,12 @@ export async function PUT(
       data: updateData,
     });
 
+    const progress = complianceProgress(updated);
     await prisma.auditTrail.create({
       data: {
         userId: session.userId,
         action: "UPDATE_COMPLIANCE",
-        details: `Updated compliance record ${params.id} (${existing.month}). PF: ${updated.pfFilingStatus}, ESIC: ${updated.esicFilingStatus}, NAPS: ${updated.napsComplianceStatus}.`,
+        details: `Updated compliance record ${params.id} (${existing.month}). ${progress.done}/${progress.total} steps completed.`,
       },
     });
 
