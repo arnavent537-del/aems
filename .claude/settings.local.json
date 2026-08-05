@@ -74,7 +74,14 @@
       "Read(//c//**)",
       "Bash(npx tsx -e ' *)",
       "Bash(sqlite3 prisma/dev.db \"SELECT employeeCode, name, clientId FROM Employee WHERE employeeCode LIKE '%AE%' OR employeeCode GLOB '[0-9]*' LIMIT 30;\")",
-      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\); console.log\\('dev dep next:', p.devDependencies?.next || p.dependencies?.next\\)\")"
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(JSON.stringify\\(p.scripts,null,2\\)\\); console.log\\('dev dep next:', p.devDependencies?.next || p.dependencies?.next\\)\")",
+      "Bash(powershell -NoProfile -Command \"Get-CimInstance Win32_Process -Filter 'ProcessId=7064' | Select-Object ProcessId, Name, CommandLine | Format-List\")",
+      "Bash(tasklist /FI \"PID eq 7064\")",
+      "Bash(tasklist)",
+      "Bash(curl -s -X POST http://localhost:3001/api/attendance/check-in -H \"Content-Type: application/json\" -d '{\"employeeId\":\"9b412db3-94ab-4347-9d10-3074560c2461\",\"date\":\"2026-08-05\",\"inTime\":\"09:12\"}')",
+      "Bash(curl -s -X POST http://localhost:3001/api/attendance/check-out -H \"Content-Type: application/json\" -d '{\"employeeId\":\"9b412db3-94ab-4347-9d10-3074560c2461\",\"date\":\"2026-08-05\",\"outTime\":\"18:30\"}')",
+      "Bash(curl -s http://localhost:3001/dashboard/advances)",
+      "Bash(curl -s \"http://localhost:3001/_next/static/chunks/src_00c1b1i._.js\")"
     ]
   }
 }

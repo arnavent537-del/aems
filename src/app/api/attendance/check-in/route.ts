@@ -63,29 +63,17 @@ export async function POST(request: Request) {
     const currentTime = inTime || now.toLocaleTimeString("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false });
     const currentLocation = inLocation || null;
 
-    // Supervisors (like Sandip Patole) use location-only punching — no inTime recorded
-    const isSupervisorPunch = employee.name === "Sandip Patole";
-
     // Check if attendance record exists for today
     const existingRecord = await prisma.attendance.findUnique({
       where: { employeeId_date: { employeeId, date } },
     });
 
     if (existingRecord) {
-      if (!isSupervisorPunch && existingRecord.inTime) {
+      if (existingRecord.inTime) {
         return NextResponse.json(
           { error: "Already checked in for today", inTime: existingRecord.inTime },
           { status: 409 }
         );
-      }
-      if (isSupervisorPunch && existingRecord.inLocation && !existingRecord.outLocation) {
-        // Supervisor already checked in — allow check-out via the check-out endpoint
-        return NextResponse.json({
-          success: true,
-          message: "Already checked in. Use Check Out to mark departure.",
-          inTime: existingRecord.inTime,
-          location: existingRecord.inLocation,
-        });
       }
 
       // Update existing record with check-in
@@ -93,7 +81,7 @@ export async function POST(request: Request) {
         where: { id: existingRecord.id },
         data: {
           status: "P",
-          ...(isSupervisorPunch ? {} : { inTime: currentTime }),
+          inTime: currentTime,
           inLocation: currentLocation,
           createdBy: systemUser.id,
         },
@@ -115,7 +103,7 @@ export async function POST(request: Request) {
         clientId: employee.clientId,
         date,
         status: "P",
-        ...(isSupervisorPunch ? {} : { inTime: currentTime }),
+        inTime: currentTime,
         inLocation: currentLocation,
         createdBy: systemUser.id,
       },

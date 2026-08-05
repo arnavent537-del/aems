@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "@/lib/api";
 import { Card, Badge, Button, Modal, Field, inputClass, Toast } from "@/components/ui";
 import type { Client, Employee, AdvanceRecord, ClientAdvanceSummary } from "@/lib/types";
-import { Plus, Trash2, Download, Upload, BarChart3, CheckCircle, XCircle, Ban, Clock, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Download, Upload, BarChart3, CheckCircle, XCircle, Ban, Clock, Search } from "lucide-react";
 
 const STATUS_COLORS: Record<string, "amber" | "blue" | "green" | "slate" | "red"> = {
   pending: "amber",
@@ -92,6 +92,7 @@ export default function AdvancesPage() {
     clients.find(c => c.id === clientId)?.name === "Arnav Enterprises";
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<AdvanceRecord | null>(null);
   const [form, setForm] = useState<any>({ type: "given", amount: "", date: new Date().toISOString().slice(0, 10), remarks: "" });
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "error" | "success" }>({ msg: "", type: "error" });
@@ -163,6 +164,7 @@ export default function AdvancesPage() {
   }, [ledger, employeeSearch]);
 
   function openAdd() {
+    setEditing(null);
     setForm({
       type: "given",
       amount: "",
@@ -173,31 +175,54 @@ export default function AdvancesPage() {
     setModalOpen(true);
   }
 
+  function openEdit(a: AdvanceRecord) {
+    setEditing(a);
+    setForm({
+      employeeId: a.employeeId,
+      clientId: a.clientId,
+      date: a.date,
+      amount: String(Math.abs(a.amount)),
+      type: a.type,
+      remarks: a.remarks || "",
+    });
+    setModalOpen(true);
+  }
+
   async function save() {
-    if (isEmployee) {
-      if (!form.amount || parseFloat(form.amount) <= 0) {
-        setToast({ msg: "Enter a valid amount", type: "error" });
-        return;
-      }
-    } else if (!form.employeeId) {
+    if ((editing || isEmployee) && (!form.amount || parseFloat(form.amount) <= 0)) {
+      setToast({ msg: "Enter a valid amount", type: "error" });
+      return;
+    }
+    if (!editing && !isEmployee && !form.employeeId) {
       setToast({ msg: "Select an employee", type: "error" });
       return;
     }
     setSaving(true);
     try {
-      const payload: any = isEmployee
-        ? { date: form.date, amount: parseFloat(form.amount), remarks: form.remarks }
-        : {
-            employeeId: form.employeeId,
-            clientId,
-            date: form.date,
-            amount: parseFloat(form.amount),
-            type: form.type,
-            remarks: form.remarks,
-          };
-      await api.createAdvance(payload);
-      setToast({ msg: isEmployee ? "Advance request submitted" : "Advance recorded", type: "success" });
+      if (editing) {
+        await api.updateAdvance(editing.id, {
+          date: form.date,
+          amount: parseFloat(form.amount),
+          type: form.type,
+          remarks: form.remarks,
+        });
+        setToast({ msg: "Advance entry updated", type: "success" });
+      } else {
+        const payload: any = isEmployee
+          ? { date: form.date, amount: parseFloat(form.amount), remarks: form.remarks }
+          : {
+              employeeId: form.employeeId,
+              clientId,
+              date: form.date,
+              amount: parseFloat(form.amount),
+              type: form.type,
+              remarks: form.remarks,
+            };
+        await api.createAdvance(payload);
+        setToast({ msg: isEmployee ? "Advance request submitted" : "Advance recorded", type: "success" });
+      }
       setModalOpen(false);
+      setEditing(null);
       await loadLedger();
     } catch (e: any) {
       setToast({ msg: e.message || "Save failed", type: "error" });
@@ -404,6 +429,9 @@ export default function AdvancesPage() {
                 {canEdit && !isArnavRestrictedView && (
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1">
+                      <button onClick={() => openEdit(a)} className="rounded p-1.5 text-slate-500 hover:bg-slate-100" title="Edit">
+                        <Pencil className="h-4 w-4" />
+                      </button>
                       {isSupervisor && a.status === "pending" && (
                         <>
                           <button onClick={() => updateStatus(a.id, "approved")} className="rounded p-1.5 text-emerald-600 hover:bg-emerald-50" title="Approve">
@@ -453,17 +481,29 @@ export default function AdvancesPage() {
 
       <Modal
         open={modalOpen}
-        title={isEmployee ? "Request Advance" : "Add Advance Entry"}
-        onClose={() => setModalOpen(false)}
+        title={editing ? "Edit Advance Entry" : isEmployee ? "Request Advance" : "Add Advance Entry"}
+        onClose={() => {
+          setModalOpen(false);
+          setEditing(null);
+        }}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModalOpen(false)}>Cancel</Button>
+            <Button variant="secondary" onClick={() => {
+              setModalOpen(false);
+              setEditing(null);
+            }}>Cancel</Button>
             <Button onClick={save} disabled={saving}>{saving ? "Saving..." : "Save"}</Button>
           </>
         }
       >
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {!isEmployee && (
+          {editing ? (
+            <Field label="Employee">
+              <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                {editing.employee?.employeeCode} — {editing.employee?.name}
+              </div>
+            </Field>
+          ) : !isEmployee && (
             <Field label="Employee">
               <EmployeeSearchSelect
                 employees={employees}

@@ -280,6 +280,16 @@ export const api = {
     return parse<AdvanceRecord>(res);
   },
 
+  async updateAdvance(id: string, payload: Partial<AdvanceRecord>): Promise<AdvanceRecord> {
+    const res = await fetch(`/api/advances/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      credentials: "include",
+    });
+    return parse<AdvanceRecord>(res);
+  },
+
   async deleteAdvance(id: string): Promise<void> {
     const res = await fetch(`/api/advances/${id}`, { method: "DELETE", credentials: "include" });
     return parse<void>(res);
