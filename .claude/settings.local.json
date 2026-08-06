@@ -81,7 +81,31 @@
       "Bash(curl -s -X POST http://localhost:3001/api/attendance/check-in -H \"Content-Type: application/json\" -d '{\"employeeId\":\"9b412db3-94ab-4347-9d10-3074560c2461\",\"date\":\"2026-08-05\",\"inTime\":\"09:12\"}')",
       "Bash(curl -s -X POST http://localhost:3001/api/attendance/check-out -H \"Content-Type: application/json\" -d '{\"employeeId\":\"9b412db3-94ab-4347-9d10-3074560c2461\",\"date\":\"2026-08-05\",\"outTime\":\"18:30\"}')",
       "Bash(curl -s http://localhost:3001/dashboard/advances)",
-      "Bash(curl -s \"http://localhost:3001/_next/static/chunks/src_00c1b1i._.js\")"
+      "Bash(curl -s \"http://localhost:3001/_next/static/chunks/src_00c1b1i._.js\")",
+      "Bash(curl -s -i -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "Bash(tasklist //FI \"PID eq 3056\")",
+      "Bash(wmic process *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/api/clients)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/api/auth/me)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d '{}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3001/api/compliance)",
+      "Bash(cd C:/AEMS/Antigravity && rm -rf .next && echo \"cleared\")",
+      "Bash(curl -s -w \"\\\\nHTTP:%{http_code}\\\\n\" -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -X POST http://localhost:3001/api/auth/logout)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"http://localhost:3001/api/compliance?month=2026-08\")",
+      "Bash(cd /tmp)",
+      "Bash(curl -s -c /tmp/aems_cookies.txt -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}' -o /dev/null -w \"login:%{http_code}\\\\n\")",
+      "Bash(curl -s -b /tmp/aems_cookies.txt \"http://localhost:3001/api/compliance?month=2026-08\" -w \"\\\\nHTTP:%{http_code}\\\\n\")",
+      "Bash(curl -s -b /tmp/aems_cookies.txt \"http://localhost:3001/api/compliance\" -w \"\\\\nHTTP:%{http_code}\\\\n\")",
+      "Bash(node -e \"console.log\\(process.version\\)\")",
+      "Bash(curl -s -o /dev/null -w \"3001 HTTP:%{http_code}\\\\n\" http://localhost:3001/api/auth/me)",
+      "Bash(curl -s -o /dev/null -w \"54065 HTTP:%{http_code}\\\\n\" http://localhost:54065/api/auth/me)",
+      "Bash(curl -s -c /tmp/aems_cookies.txt -X POST http://localhost:3001/api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"admin123\"}' -w \"\\\\nlogin HTTP:%{http_code}\\\\n\")",
+      "Bash(sleep 8; tail -30 /tmp/aems-dev-3007.log 2>&1)",
+      "Bash(taskkill //PID 2344 //F)",
+      "Bash(rm -f C:/AEMS/Antigravity/test-create.mjs C:/AEMS/Antigravity/cleanup-test.mjs)",
+      "Bash(curl -s -b /tmp/aems_cookies2.txt -X DELETE \"http://localhost:3001/api/compliance/064c89d7-0c5e-470d-93d0-152a120803cd\" -o /dev/null -w \"cleanup delete HTTP:%{http_code}\\\\n\")",
+      "Bash(rm -f /tmp/aems_cookies.txt /tmp/aems_cookies2.txt)"
     ]
   }
 }

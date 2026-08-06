@@ -248,14 +248,6 @@ export default function CompliancePage() {
               </div>
             </div>
           ))}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Field label="PF Challan URL">
-              <input className={inputClass} value={form.pfChallanUrl || ""} onChange={(e) => setForm({ ...form, pfChallanUrl: e.target.value })} />
-            </Field>
-            <Field label="ESIC Challan URL">
-              <input className={inputClass} value={form.esicChallanUrl || ""} onChange={(e) => setForm({ ...form, esicChallanUrl: e.target.value })} />
-            </Field>
-          </div>
         </div>
       </Modal>
 

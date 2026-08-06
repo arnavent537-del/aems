@@ -138,8 +138,6 @@ export interface ComplianceRecord {
   esicChallanPaidStatus: string;
   ptPaidStatus: string;
   gstPaidStatus: string;
-  pfChallanUrl: string | null;
-  esicChallanUrl: string | null;
   showCauseNoticesCount: number;
   client?: { name: string };
 }

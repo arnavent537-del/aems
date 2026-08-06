@@ -21,7 +21,7 @@ export async function PUT(
     }
 
     const updateData: any = {};
-    const fields = [...COMPLIANCE_STATUS_KEYS, "pfChallanUrl", "esicChallanUrl", "showCauseNoticesCount"];
+    const fields = [...COMPLIANCE_STATUS_KEYS, "showCauseNoticesCount"];
     for (const f of fields) {
       if (body[f] !== undefined) updateData[f] = body[f];
     }

@@ -201,8 +201,6 @@ model Compliance {
   esicChallanPaidStatus      String   @default("Unpaid")  // 'Unpaid', 'Paid'
   ptPaidStatus               String   @default("Unpaid")  // 'Unpaid', 'Paid'
   gstPaidStatus              String   @default("Unpaid")  // 'Unpaid', 'Paid'
-  pfChallanUrl               String?
-  esicChallanUrl             String?
   showCauseNoticesCount      Int      @default(0)
   createdAt                  DateTime @default(now())
   updatedAt                  DateTime @updatedAt
