@@ -21,7 +21,6 @@ function currentMonth(): string {
 
 export default function CompliancePage() {
   const [clients, setClients] = useState<Client[]>([]);
-  const [clientId, setClientId] = useState<string>("");
   const [month, setMonth] = useState(currentMonth());
   const [records, setRecords] = useState<ComplianceRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,22 +36,18 @@ export default function CompliancePage() {
 
   useEffect(() => {
     api.getMe().then((u) => setRole(u.role)).catch(() => {});
-    api.listClients().then((cl) => {
-      setClients(cl);
-      if (cl.length) setClientId(cl[0].id);
-    });
+    api.listClients().then(setClients).catch(() => {});
   }, []);
 
   const load = useCallback(async () => {
-    if (!clientId) return;
     setLoading(true);
     try {
-      const data = await api.listCompliance({ clientId, month });
+      const data = await api.listCompliance({ month });
       setRecords(data);
     } finally {
       setLoading(false);
     }
-  }, [clientId, month]);
+  }, [month]);
 
   useEffect(() => {
     load();
@@ -60,7 +55,7 @@ export default function CompliancePage() {
 
   function openCreate() {
     setEditing(null);
-    setForm({ clientId, month, ...defaultComplianceStatuses() });
+    setForm({ clientId: clients[0]?.id || "", month, ...defaultComplianceStatuses() });
     setModalOpen(true);
   }
 
@@ -116,19 +111,10 @@ export default function CompliancePage() {
 
       <Card className="flex flex-wrap items-end gap-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-slate-500">Client</label>
-          <select className={inputClass} value={clientId} onChange={(e) => setClientId(e.target.value)}>
-            {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
           <label className="mb-1 block text-xs font-medium text-slate-500">Month</label>
           <input type="month" className={inputClass} value={month} onChange={(e) => setMonth(e.target.value)} />
         </div>
+        <p className="text-xs text-slate-500">Showing compliance for all clients in this month.</p>
       </Card>
 
       <Card className="overflow-x-auto p-0">

@@ -14,13 +14,6 @@
       "runtimeArgs": ["-m", "streamlit", "run", "C:\\AEMS\\Expense Tracker\\app.py", "--server.port", "8501"],
       "port": 8501,
       "autoPort": true
-    },
-    {
-      "name": "dev-clean",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["next", "dev", "-p", "3006"],
-      "port": 3006,
-      "autoPort": true
     }
   ]
 }
