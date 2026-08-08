@@ -25,12 +25,15 @@ function EmployeeSearchSelect({ employees, value, onChange }: { employees: Emplo
     setQuery(sel ? `${sel.employeeCode} — ${sel.name}` : "");
   }, [value, employees]);
 
-  const matches = employees.filter(
-    (e) =>
-      !query.trim() ||
-      e.name.toLowerCase().includes(query.toLowerCase()) ||
-      e.employeeCode.toLowerCase().includes(query.toLowerCase())
-  );
+  const trimmedQuery = query.trim();
+
+  const matches = trimmedQuery
+    ? employees.filter(
+        (e) =>
+          e.name.toLowerCase().includes(trimmedQuery.toLowerCase()) ||
+          e.employeeCode.toLowerCase().includes(trimmedQuery.toLowerCase())
+      )
+    : [];
 
   return (
     <div className="relative">
