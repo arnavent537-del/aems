@@ -44,7 +44,7 @@ function EmployeeSearchSelect({ employees, value, onChange }: { employees: Emplo
           onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
-          placeholder="Search name or code"
+          placeholder="Search employee"
           className="w-full bg-transparent px-2 py-2 text-sm outline-none"
         />
       </div>
@@ -173,7 +173,7 @@ export default function AdvancesPage() {
       amount: "",
       date: new Date().toISOString().slice(0, 10),
       remarks: "",
-      employeeId: employees[0]?.id || "",
+      employeeId: "",
     });
     setModalOpen(true);
   }
