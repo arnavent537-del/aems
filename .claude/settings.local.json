@@ -105,7 +105,13 @@
       "Bash(taskkill //PID 2344 //F)",
       "Bash(rm -f C:/AEMS/Antigravity/test-create.mjs C:/AEMS/Antigravity/cleanup-test.mjs)",
       "Bash(curl -s -b /tmp/aems_cookies2.txt -X DELETE \"http://localhost:3001/api/compliance/064c89d7-0c5e-470d-93d0-152a120803cd\" -o /dev/null -w \"cleanup delete HTTP:%{http_code}\\\\n\")",
-      "Bash(rm -f /tmp/aems_cookies.txt /tmp/aems_cookies2.txt)"
+      "Bash(rm -f /tmp/aems_cookies.txt /tmp/aems_cookies2.txt)",
+      "Bash(curl -s http://localhost:3001/dashboard/attendance)",
+      "Bash(curl -s http://localhost:3001/login)",
+      "Bash(curl -s http://localhost:3001/dashboard)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} -> %{redirect_url}\\\\n\" http://localhost:3001/dashboard/attendance)",
+      "Bash(curl -s -H \"Cookie: aems_session=test\" http://localhost:3001/dashboard/attendance)",
+      "Bash(curl -s -H \"Cookie: aems_session=test\" http://localhost:3001/dashboard)"
     ]
   }
 }
